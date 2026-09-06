@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: canteen-frontend
+  namespace: railsuite
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canteen-frontend
+  template:
+    metadata:
+      labels:
+        app: canteen-frontend
+    spec:
+      containers:
+        - name: canteen-frontend
+          image: canteen-frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80

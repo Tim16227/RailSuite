@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: canteen
+      POSTGRES_USER: canteen_user
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    networks:
+      - backend-net
+
+  core:
+    build: ./backend/core
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/canteen
+      SPRING_DATASOURCE_USERNAME: canteen_user
+      SPRING_DATASOURCE_PASSWORD: secret
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+    networks:
+      - backend-net
+
+networks:
+  backend-net:

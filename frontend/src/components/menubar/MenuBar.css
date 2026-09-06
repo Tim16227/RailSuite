@@ -1,0 +1,141 @@
+.menu-container {
+  width: 100%;
+  background: #e9edf2;
+  border-bottom: 1px solid #aeb6bf;
+  user-select: none;
+}
+
+/* =========================
+   Hauptmenü
+   ========================= */
+
+.main-menu {
+  height: 38px;
+
+  display: flex;
+  align-items: stretch;
+
+  background: #dfe4e9;
+  border-bottom: 1px solid #b8c0c8;
+}
+
+.main-menu-item {
+  padding: 0 15px;
+
+  border: none;
+  border-right: 1px solid transparent;
+
+  background: transparent;
+
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  color: #20252a;
+
+  cursor: pointer;
+}
+
+.main-menu-item:hover {
+  background: #f5f7f9;
+  border-right-color: #c5ccd3;
+}
+
+.main-menu-item.active {
+  background: #ffffff;
+  border-right-color: #c5ccd3;
+  box-shadow: inset 0 -2px 0 #357abd;
+}
+
+
+/* =========================
+   Tool Ribbon
+   ========================= */
+
+.tool-ribbon {
+  min-height: 82px;
+
+  display: flex;
+  align-items: stretch;
+
+  padding: 5px 10px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.08);
+
+  overflow-x: auto;
+}
+
+
+/* =========================
+   Tool Button
+   ========================= */
+
+.tool-button {
+  min-width: 78px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 5px 10px;
+
+  border: 1px solid transparent;
+  border-radius: 3px;
+
+  background: transparent;
+
+  color: #20252a;
+
+  cursor: pointer;
+}
+
+.tool-button:hover {
+  background: #edf3fa;
+  border-color: #b8cce2;
+}
+
+.tool-button:active {
+  background: #dce9f7;
+}
+
+
+/* =========================
+   Icon
+   ========================= */
+
+.tool-icon {
+  height: 35px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 25px;
+}
+
+
+/* =========================
+   Text
+   ========================= */
+
+.tool-label {
+  margin-top: 4px;
+
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+
+/* =========================
+   Separator
+   ========================= */
+
+.tool-separator {
+  width: 1px;
+
+  margin: 8px 8px;
+
+  background: #c8cdd2;
+}

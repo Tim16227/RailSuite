@@ -1,0 +1,33 @@
+:root {
+  /* Colors */
+  --color-primary: #101a24;
+  --color-danger: #c62828;
+  --color-warning: #f59e0b;
+  --color-success: #1a7f37;
+  --color-muted: #64748b;
+
+  --color-border: #101a24;
+
+  --color-btn: #8c8c8c;
+
+  --color-primary-bg: rgba(16, 26, 36, 0.1);
+  --color-danger-bg: rgba(198, 40, 40, 0.12);
+  --color-warning-bg: rgba(245, 158, 11, 0.15);
+  --color-success-bg: rgba(26, 127, 55, 0.12);
+  --color-muted-bg: rgba(100, 116, 139, 0.12);
+
+  /* Typography scale */
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 20px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+}

@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: canteen-postgres
+    environment:
+      POSTGRES_DB: canteen
+      POSTGRES_USER: canteen_user
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+
+  core:
+    build:
+      context: ../../backend/core
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/canteen
+      DB_USER: canteen_user
+      DB_PASSWORD: secret
+    depends_on:
+      - postgres

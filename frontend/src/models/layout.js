@@ -1,0 +1,35 @@
+export const LayoutElementType = {
+  STRAIGHT: "STRAIGHT",
+  CURVE_45: "CURVE_45",
+  CURVE_90: "CURVE_90",
+  TURNOUT: "TURNOUT",
+  CROSSING: "CROSSING",
+};
+
+export const LayoutOrientation = {
+  NORTH: "NORTH",
+  NORTH_EAST: "NORTH_EAST",
+  EAST: "EAST",
+  SOUTH_EAST: "SOUTH_EAST",
+  SOUTH: "SOUTH",
+  SOUTH_WEST: "SOUTH_WEST",
+  WEST: "WEST",
+  NORTH_WEST: "NORTH_WEST",
+};
+
+export const LayoutTurnoutHand = {
+  LEFT: "LEFT",
+  RIGHT: "RIGHT",
+};
+
+export const Tool = {
+  PEN: "PEN",
+  ERASER: "ERASER",
+  STRAIGHT: "STRAIGHT",
+  CURVE_45: "CURVE_45",
+  CURVE_90: "CURVE_90",
+  TURNOUT_LEFT: "TURNOUT_LEFT",
+  TURNOUT_RIGHT: "TURNOUT_RIGHT",
+  ROTATE_CW: "ROTATE_CW",
+  ROTATE_CCW: "ROTATE_CCW",
+};

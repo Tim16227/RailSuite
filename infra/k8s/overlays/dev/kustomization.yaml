@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: railsuite
+
+
+resources:
+
+  - ../../base
+  - ../../components/postgres
+  - ../../components/keycloak
+
+generatorOptions:
+
+  disableNameSuffixHash: true

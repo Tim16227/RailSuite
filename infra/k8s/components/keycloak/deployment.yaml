@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: keycloak
+  namespace: railsuite
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: keycloak
+
+  template:
+    metadata:
+      labels:
+        app: keycloak
+
+    spec:
+      containers:
+
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:latest
+
+          args:
+            - start-dev
+
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: admin
+
+            - name: KC_DB
+              value: postgres
+
+            - name: KC_DB_URL
+              value: jdbc:postgresql://postgres:5432/canteen
+
+            - name: KC_DB_SCHEMA
+              value: keycloak
+
+            - name: KC_DB_USERNAME
+              value: canteen_user
+
+            - name: KC_DB_PASSWORD
+              value: secret
+
+          ports:
+            - containerPort: 8080
+
+      volumes:
+
+        - name: keycloak-import
+
+          configMap:
+            name: keycloak-import

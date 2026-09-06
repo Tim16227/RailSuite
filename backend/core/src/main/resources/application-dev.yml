@@ -1,0 +1,17 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/canteen
+    username: canteen_user
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    root: DEBUG

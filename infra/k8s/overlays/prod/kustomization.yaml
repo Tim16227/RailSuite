@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+
+namespace: railsuite
+
+
+resources:
+
+  - ../../base
+
+  - ../../components/postgres
+  - ../../components/keycloak
+  - ../../components/backend
+  - ../../components/frontend
+  - ../../components/ingress
