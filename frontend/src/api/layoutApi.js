@@ -76,3 +76,21 @@ export async function deleteLayoutCell(
         }
     );
 }
+
+export async function setLayoutTurnout(
+    layoutId,
+    x,
+    y,
+    state
+) {
+    const params = new URLSearchParams({
+        state,
+    });
+
+    await apiFetch(
+        `/api/layouts/${layoutId}/cells/${x}/${y}/turnout?${params}`,
+        {
+            method: "POST",
+        }
+    );
+}

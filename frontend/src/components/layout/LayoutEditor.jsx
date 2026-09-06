@@ -12,17 +12,15 @@ import {
   deleteLayoutCell,
 } from "../../api/layoutApi";
 
-import { LayoutToolbar } from "./LayoutToolbar";
 import { LayoutGrid } from "./LayoutGrid";
 
 export function LayoutEditor({
   initialLayout,
+  tool,
+  setTool,
 }) {
   const [layout, setLayout] =
     useState(initialLayout);
-
-  const [tool, setTool] =
-    useState(Tool.PEN);
 
   const processingStrokeRef =
     useRef(false);
@@ -1336,10 +1334,6 @@ export function LayoutEditor({
 
   return (
     <div className="layout-editor">
-      <LayoutToolbar
-        tool={tool}
-        setTool={setTool}
-      />
 
       <div className="layout-editor-canvas">
         <LayoutGrid

@@ -1,65 +1,95 @@
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useState,
+} from "react";
 
 import {
-  createLayout,
-  getLayouts,
+    createLayout,
+    getLayouts,
 } from "../api/layoutApi";
 
-import { LayoutEditor } from "../components/layout/LayoutEditor";
+import {
+    LayoutEditor,
+} from "../components/layout/LayoutEditor";
 
-export default function LayoutPage() {
-  const [layout, setLayout] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function LayoutPage({
+    tool,
+    setTool,
+}) {
+    const [layout, setLayout] =
+        useState(null);
 
-  useEffect(() => {
-    loadLayout();
-  }, []);
+    const [loading, setLoading] =
+        useState(true);
 
-  async function loadLayout() {
-    try {
-      setLoading(true);
-      setError(null);
+    const [error, setError] =
+        useState(null);
 
-      const layouts = await getLayouts();
+    useEffect(() => {
+        loadLayout();
+    }, []);
 
-      if (layouts.length > 0) {
-        setLayout(layouts[0]);
-        return;
-      }
+    async function loadLayout() {
+        try {
+            setLoading(true);
+            setError(null);
 
-      const newLayout = await createLayout({
-        name: "Mein Gleisplan",
-        width: 30,
-        height: 20,
-      });
+            const layouts =
+                await getLayouts();
 
-      setLayout(newLayout);
-    } catch (error) {
-      console.error(error);
-      setError(
-        "Das Layout konnte nicht geladen werden."
-      );
-    } finally {
-      setLoading(false);
+            if (layouts.length > 0) {
+                setLayout(layouts[0]);
+                return;
+            }
+
+            const newLayout =
+                await createLayout({
+                    name: "Mein Gleisplan",
+                    width: 30,
+                    height: 20,
+                });
+
+            setLayout(newLayout);
+        } catch (error) {
+            console.error(error);
+
+            setError(
+                "Das Layout konnte nicht geladen werden."
+            );
+        } finally {
+            setLoading(false);
+        }
     }
-  }
 
-  if (loading) {
-    return <div>Layout wird geladen...</div>;
-  }
+    if (loading) {
+        return (
+            <div>
+                Layout wird geladen...
+            </div>
+        );
+    }
 
-  if (error) {
-    return <div>{error}</div>;
-  }
+    if (error) {
+        return (
+            <div>
+                {error}
+            </div>
+        );
+    }
 
-  if (!layout) {
-    return <div>Kein Layout vorhanden.</div>;
-  }
+    if (!layout) {
+        return (
+            <div>
+                Kein Layout vorhanden.
+            </div>
+        );
+    }
 
-  return (
-    <LayoutEditor
-      initialLayout={layout}
-    />
-  );
+    return (
+        <LayoutEditor
+            initialLayout={layout}
+            tool={tool}
+            setTool={setTool}
+        />
+    );
 }
