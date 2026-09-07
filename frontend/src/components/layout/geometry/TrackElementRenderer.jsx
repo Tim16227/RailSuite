@@ -22,6 +22,7 @@ import {
   CrossingRenderer,
 } from "./CrossingRenderer";
 
+
 export function TrackElementRenderer({
   cell,
   size,
@@ -30,7 +31,9 @@ export function TrackElementRenderer({
     case LayoutElementType.STRAIGHT:
       return (
         <StraightRenderer
-          connection={cell.connections[0]}
+          connection={
+            cell.connections[0]
+          }
           size={size}
         />
       );
@@ -38,7 +41,9 @@ export function TrackElementRenderer({
     case LayoutElementType.CURVE_45:
       return (
         <Curve45Renderer
-          connection={cell.connections[0]}
+          connection={
+            cell.connections[0]
+          }
           size={size}
         />
       );
@@ -46,7 +51,9 @@ export function TrackElementRenderer({
     case LayoutElementType.CURVE_90:
       return (
         <Curve90Renderer
-          connection={cell.connections[0]}
+          connection={
+            cell.connections[0]
+          }
           size={size}
         />
       );
@@ -54,15 +61,22 @@ export function TrackElementRenderer({
     case LayoutElementType.TURNOUT:
       return (
         <TurnoutRenderer
-          connections={cell.connections}
+          connections={
+            cell.connections
+          }
           size={size}
+          turnoutState={
+            cell.turnoutState
+          }
         />
       );
 
     case LayoutElementType.CROSSING:
       return (
         <CrossingRenderer
-          connections={cell.connections}
+          connections={
+            cell.connections
+          }
           size={size}
         />
       );

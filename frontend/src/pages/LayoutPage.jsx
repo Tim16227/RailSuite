@@ -13,6 +13,8 @@ import {
 } from "../components/layout/LayoutEditor";
 
 export default function LayoutPage({
+    tool,
+    setTool,
     editMode,
 }) {
     const [layout, setLayout] =
@@ -37,7 +39,9 @@ export default function LayoutPage({
                 await getLayouts();
 
             if (layouts.length > 0) {
-                setLayout(layouts[0]);
+                setLayout(
+                    layouts[0]
+                );
                 return;
             }
 
@@ -48,7 +52,9 @@ export default function LayoutPage({
                     height: 20,
                 });
 
-            setLayout(newLayout);
+            setLayout(
+                newLayout
+            );
         } catch (error) {
             console.error(error);
 
@@ -87,6 +93,8 @@ export default function LayoutPage({
     return (
         <LayoutEditor
             initialLayout={layout}
+            tool={tool}
+            setTool={setTool}
             editMode={editMode}
         />
     );

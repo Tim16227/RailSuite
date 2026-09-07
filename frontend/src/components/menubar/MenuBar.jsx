@@ -204,10 +204,10 @@ const menuNames = [
 ];
 
 export default function MenuBar({
-    editMode,
-    setEditMode,
     tool,
     setTool,
+    editMode,
+    setEditMode,
 }) {
     const [
         activeMenu,
@@ -224,12 +224,21 @@ export default function MenuBar({
         );
     }
 
+    function handleEditModeToggle() {
+        setEditMode(
+            (current) => !current
+        );
+    }
+
     return (
         <div className="menu-container">
 
-            {/* Hauptmenü */}
+            {/* =========================
+                Hauptmenü
+                ========================= */}
 
             <div className="main-menu">
+
                 {menuNames.map(
                     (menuName) => (
                         <button
@@ -253,43 +262,53 @@ export default function MenuBar({
                         </button>
                     )
                 )}
-            </div>
 
-            <div className="edit-mode-area">
+                {/* =========================
+                    Editiermodus
+                    ========================= */}
+
                 <button
                     type="button"
                     className={
-                        editMode
-                            ? "edit-mode-button active"
-                            : "edit-mode-button"
+                        `edit-mode-button ${
+                            editMode
+                                ? "active"
+                                : ""
+                        }`
                     }
-                    onClick={() =>
-                        setEditMode(
-                            (current) => !current
-                        )
+                    onClick={
+                        handleEditModeToggle
                     }
                     title={
                         editMode
-                            ? "Editiermodus beenden"
-                            : "Editiermodus aktivieren"
+                            ? "In den Betriebsmodus wechseln"
+                            : "In den Editiermodus wechseln"
                     }
                 >
-                    <span className="edit-mode-icon">
-                        {editMode ? "🔧" : "▶️"}
+                    <span>
+                        {editMode
+                            ? "✏️"
+                            : "▶️"}
                     </span>
 
                     <span>
                         {editMode
                             ? "Editiermodus"
-                            : "Betrieb"}
+                            : "Betriebsmodus"}
                     </span>
                 </button>
             </div>
 
-            {/* Toolbereich */}
+            {/* =========================
+                Tool Ribbon
+                ========================= */}
 
             {activeMenu && (
                 <div className="tool-ribbon">
+
+                    {/* =========================
+                        Bearbeiten
+                        ========================= */}
 
                     {activeMenu ===
                         "Bearbeiten" && (
@@ -298,6 +317,10 @@ export default function MenuBar({
                             setTool={setTool}
                         />
                     )}
+
+                    {/* =========================
+                        Projekt
+                        ========================= */}
 
                     {activeMenu ===
                         "Projekt" && (
@@ -343,6 +366,10 @@ export default function MenuBar({
                         </>
                     )}
 
+                    {/* =========================
+                        Gleis
+                        ========================= */}
+
                     {activeMenu ===
                         "Gleis" && (
                         <>
@@ -373,6 +400,10 @@ export default function MenuBar({
                             </button>
                         </>
                     )}
+
+                    {/* =========================
+                        Alle übrigen Menüs
+                        ========================= */}
 
                     {activeMenu !==
                         "Bearbeiten" &&
@@ -426,10 +457,8 @@ export default function MenuBar({
                             )}
                         </>
                     )}
-
                 </div>
             )}
-
         </div>
     );
 }

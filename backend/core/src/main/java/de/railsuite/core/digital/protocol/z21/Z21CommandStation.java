@@ -131,10 +131,6 @@ public class Z21CommandStation implements DigitalCommandStation {
                     activatePacket
             );
 
-            sleep(
-                    digitalSystem.getTurnoutPause()
-            );
-
             /*
              * -------------------------------------------------
              * 2. DEACTIVATE
