@@ -11,7 +11,9 @@ import de.railsuite.core.layout.exception.LayoutNotFoundException;
 import de.railsuite.core.layout.mapper.LayoutMapper;
 import de.railsuite.core.layout.repository.LayoutCellRepository;
 import de.railsuite.core.layout.repository.LayoutRepository;
+
 import jakarta.transaction.Transactional;
+
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,12 +43,12 @@ public class LayoutService {
     public LayoutResponse createLayout(
             CreateLayoutRequest request
     ) {
-
-        Layout layout = new Layout(
-                request.name(),
-                request.width(),
-                request.height()
-        );
+        Layout layout =
+                new Layout(
+                        request.name(),
+                        request.width(),
+                        request.height()
+                );
 
         layoutRepository.save(layout);
 
@@ -57,14 +59,13 @@ public class LayoutService {
     public LayoutResponse getLayout(
             UUID layoutId
     ) {
-
-        Layout layout = findLayout(layoutId);
+        Layout layout =
+                findLayout(layoutId);
 
         return mapper.toResponse(layout);
     }
 
     public List<LayoutResponse> getLayouts() {
-
         return layoutRepository.findAll()
                 .stream()
                 .map(mapper::toResponse)
@@ -75,10 +76,12 @@ public class LayoutService {
             UUID layoutId,
             UpdateLayoutRequest request
     ) {
+        Layout layout =
+                findLayout(layoutId);
 
-        Layout layout = findLayout(layoutId);
-
-        layout.setName(request.name());
+        layout.setName(
+                request.name()
+        );
 
         return mapper.toResponse(layout);
     }
@@ -89,8 +92,8 @@ public class LayoutService {
             int y,
             SetLayoutCellRequest request
     ) {
-
-        Layout layout = findLayout(layoutId);
+        Layout layout =
+                findLayout(layoutId);
 
         validateCoordinates(
                 layout,
@@ -124,23 +127,47 @@ public class LayoutService {
                 request.turnoutHand()
         );
 
-        cell.setDigitalAddress(
-                request.digitalAddress()
-        );
+        if (request.elementType()
+                == LayoutElementType.TURNOUT) {
 
-        cell.setDigitalPort(
-                request.digitalPort()
-        );
+            cell.setDigitalAddress(
+                    request.digitalAddress()
+            );
 
-        cell.setDigitalSystem(
-                request.digitalSystemId() == null
-                        ? null
-                        : findDigitalSystem(
-                        request.digitalSystemId()
-                )
-        );
+            cell.setDigitalSystem(
+                    request.digitalSystemId() == null
+                            ? null
+                            : findDigitalSystem(
+                            request.digitalSystemId()
+                    )
+            );
 
-        validateDigitalConfiguration(cell);
+            /*
+             * Legacy-Feld.
+             *
+             * Die sichtbare RailSuite-Adresse ist NICHT
+             * mehr an einen Port gekoppelt.
+             *
+             * Das alte Feld bleibt nur erhalten, damit
+             * das bestehende Frontend und die bestehende
+             * Datenbank kompatibel bleiben.
+             */
+            cell.setDigitalPort(
+                    request.digitalAddress() == null
+                            ? null
+                            : 1
+            );
+
+        } else {
+
+            cell.setDigitalSystem(null);
+            cell.setDigitalAddress(null);
+            cell.setDigitalPort(null);
+        }
+
+        validateDigitalConfiguration(
+                cell
+        );
 
         cellRepository.save(cell);
 
@@ -152,8 +179,8 @@ public class LayoutService {
             int x,
             int y
     ) {
-
-        Layout layout = findLayout(layoutId);
+        Layout layout =
+                findLayout(layoutId);
 
         validateCoordinates(
                 layout,
@@ -171,7 +198,6 @@ public class LayoutService {
     private DigitalSystem findDigitalSystem(
             UUID digitalSystemId
     ) {
-
         return digitalSystemRepository
                 .findById(digitalSystemId)
                 .orElseThrow(() ->
@@ -185,10 +211,8 @@ public class LayoutService {
     private void validateDigitalConfiguration(
             LayoutCell cell
     ) {
-
         if (cell.getElementType()
                 != LayoutElementType.TURNOUT) {
-
             return;
         }
 
@@ -198,39 +222,32 @@ public class LayoutService {
         boolean hasAddress =
                 cell.getDigitalAddress() != null;
 
-        boolean hasPort =
-                cell.getDigitalPort() != null;
+        if (!hasSystem && !hasAddress) {
+            return;
+        }
 
-        if (hasSystem || hasAddress || hasPort) {
+        if (!hasSystem) {
+            throw new InvalidLayoutCellException(
+                    "A turnout digital system is required"
+            );
+        }
 
-            if (!hasSystem) {
-                throw new InvalidLayoutCellException(
-                        "A turnout digital system is required"
-                );
-            }
-
-            if (!hasAddress) {
-                throw new InvalidLayoutCellException(
-                        "A turnout digital address is required"
-                );
-            }
-
-            if (!hasPort) {
-                throw new InvalidLayoutCellException(
-                        "A turnout digital port is required"
-                );
-            }
+        if (!hasAddress) {
+            throw new InvalidLayoutCellException(
+                    "A turnout digital address is required"
+            );
         }
     }
 
     private Layout findLayout(
             UUID layoutId
     ) {
-
         return layoutRepository
                 .findById(layoutId)
                 .orElseThrow(() ->
-                        new LayoutNotFoundException(layoutId)
+                        new LayoutNotFoundException(
+                                layoutId
+                        )
                 );
     }
 
@@ -239,16 +256,21 @@ public class LayoutService {
             int x,
             int y
     ) {
+        if (x < 0
+                || x >= layout.getWidth()) {
 
-        if (x < 0 || x >= layout.getWidth()) {
             throw new InvalidLayoutCellException(
-                    "X coordinate outside layout: " + x
+                    "X coordinate outside layout: "
+                            + x
             );
         }
 
-        if (y < 0 || y >= layout.getHeight()) {
+        if (y < 0
+                || y >= layout.getHeight()) {
+
             throw new InvalidLayoutCellException(
-                    "Y coordinate outside layout: " + y
+                    "Y coordinate outside layout: "
+                            + y
             );
         }
     }

@@ -204,14 +204,16 @@ export function LayoutEditor({
     turnoutHand
   ) {
     const updatedCell =
-      await setLayoutCell(
-        layout.id,
-        point.x,
-        point.y,
-        elementType,
-        orientation,
-        turnoutHand
-      );
+        await setLayoutCell(
+            layout.id,
+            cell.x,
+            cell.y,
+            cell.elementType,
+            orientation,
+            cell.turnoutHand,
+            cell.digitalSystem?.id ?? null,
+            cell.digitalAddress ?? null
+        );
 
     updateCell(
       updatedCell

@@ -1,27 +1,38 @@
 import { apiFetch } from "./apiClient";
 
 export async function getLayouts() {
-    const response = await apiFetch("/api/layouts");
+    const response =
+        await apiFetch(
+            "/api/layouts"
+        );
 
     return response.json();
 }
 
-export async function getLayout(layoutId) {
-    const response = await apiFetch(
-        `/api/layouts/${layoutId}`
-    );
+export async function getLayout(
+    layoutId
+) {
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}`
+        );
 
     return response.json();
 }
 
-export async function createLayout(layout) {
-    const response = await apiFetch(
-        "/api/layouts",
-        {
-            method: "POST",
-            body: JSON.stringify(layout),
-        }
-    );
+export async function createLayout(
+    layout
+) {
+    const response =
+        await apiFetch(
+            "/api/layouts",
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    layout
+                ),
+            }
+        );
 
     return response.json();
 }
@@ -30,13 +41,16 @@ export async function updateLayout(
     layoutId,
     layout
 ) {
-    const response = await apiFetch(
-        `/api/layouts/${layoutId}`,
-        {
-            method: "PUT",
-            body: JSON.stringify(layout),
-        }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}`,
+            {
+                method: "PUT",
+                body: JSON.stringify(
+                    layout
+                ),
+            }
+        );
 
     return response.json();
 }
@@ -47,19 +61,25 @@ export async function setLayoutCell(
     y,
     elementType,
     orientation,
-    turnoutHand = null
+    turnoutHand = null,
+    digitalSystemId = null,
+    digitalAddress = null
 ) {
-    const response = await apiFetch(
-        `/api/layouts/${layoutId}/cells/${x}/${y}`,
-        {
-            method: "PUT",
-            body: JSON.stringify({
-                elementType,
-                orientation,
-                turnoutHand,
-            }),
-        }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/cells/${x}/${y}`,
+            {
+                method: "PUT",
+
+                body: JSON.stringify({
+                    elementType,
+                    orientation,
+                    turnoutHand,
+                    digitalSystemId,
+                    digitalAddress,
+                }),
+            }
+        );
 
     return response.json();
 }
@@ -83,9 +103,10 @@ export async function setLayoutTurnout(
     y,
     state
 ) {
-    const params = new URLSearchParams({
-        state,
-    });
+    const params =
+        new URLSearchParams({
+            state,
+        });
 
     await apiFetch(
         `/api/layouts/${layoutId}/cells/${x}/${y}/turnout?${params}`,

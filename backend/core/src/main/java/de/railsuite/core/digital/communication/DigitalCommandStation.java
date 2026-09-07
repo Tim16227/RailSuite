@@ -8,7 +8,6 @@ public interface DigitalCommandStation {
     void setTurnout(
             DigitalSystem digitalSystem,
             int digitalAddress,
-            int digitalPort,
             TurnoutState state
     );
 }

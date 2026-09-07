@@ -7,6 +7,7 @@ import de.railsuite.core.digital.entity.TurnoutState;
 import de.railsuite.core.layout.entity.LayoutCell;
 import de.railsuite.core.layout.entity.LayoutElementType;
 import de.railsuite.core.layout.repository.LayoutCellRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +34,6 @@ public class DigitalTurnoutService {
             int y,
             TurnoutState state
     ) {
-
         LayoutCell cell =
                 layoutCellRepository
                         .findByLayoutIdAndXAndY(
@@ -63,6 +63,7 @@ public class DigitalTurnoutService {
         }
 
         if (cell.getDigitalSystem() == null) {
+
             throw new DigitalConnectionException(
                     "No digital system configured for turnout at "
                             + x
@@ -72,17 +73,9 @@ public class DigitalTurnoutService {
         }
 
         if (cell.getDigitalAddress() == null) {
+
             throw new DigitalConnectionException(
                     "No digital address configured for turnout at "
-                            + x
-                            + ","
-                            + y
-            );
-        }
-
-        if (cell.getDigitalPort() == null) {
-            throw new DigitalConnectionException(
-                    "No digital port configured for turnout at "
                             + x
                             + ","
                             + y
@@ -97,7 +90,6 @@ public class DigitalTurnoutService {
         commandStation.setTurnout(
                 cell.getDigitalSystem(),
                 cell.getDigitalAddress(),
-                cell.getDigitalPort(),
                 state
         );
     }

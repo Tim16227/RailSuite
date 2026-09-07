@@ -5,11 +5,6 @@ import {
 import Dialog from "../../dialog/Dialog/Dialog";
 
 import {
-    LayoutOrientation,
-    LayoutTurnoutHand,
-} from "../../../models/layout";
-
-import {
     setLayoutCell,
 } from "../../../api/layoutApi";
 
@@ -22,25 +17,21 @@ export default function TurnoutDialog({
     onSaved,
 }) {
     const [
-        turnoutHand,
-        setTurnoutHand,
+        digitalAddress,
+        setDigitalAddress,
     ] = useState(
-        cell.turnoutHand ??
-        LayoutTurnoutHand.LEFT
-    );
-
-    const [
-        orientation,
-        setOrientation,
-    ] = useState(
-        cell.orientation ??
-        LayoutOrientation.EAST
+        cell.digitalAddress ?? ""
     );
 
     const [
         saving,
         setSaving,
     ] = useState(false);
+
+    const [
+        error,
+        setError,
+    ] = useState(null);
 
     async function handleSubmit(
         event
@@ -51,8 +42,29 @@ export default function TurnoutDialog({
             return;
         }
 
+        const address =
+            Number(
+                digitalAddress
+            );
+
+        if (
+            !Number.isInteger(address) ||
+            address < 1
+        ) {
+            setError(
+                "Bitte eine gültige Weichenadresse größer als 0 eingeben."
+            );
+
+            return;
+        }
+
         try {
             setSaving(true);
+            setError(null);
+
+            const digitalSystemId =
+                cell.digitalSystem?.id ??
+                null;
 
             const updatedCell =
                 await setLayoutCell(
@@ -60,8 +72,10 @@ export default function TurnoutDialog({
                     cell.x,
                     cell.y,
                     cell.elementType,
-                    orientation,
-                    turnoutHand
+                    cell.orientation,
+                    cell.turnoutHand,
+                    selectedDigitalSystemId,
+                    address
                 );
 
             if (onSaved) {
@@ -71,11 +85,17 @@ export default function TurnoutDialog({
             }
 
             onClose();
-        } catch (error) {
+
+        } catch (exception) {
             console.error(
-                "Fehler beim Speichern der Weiche:",
-                error
+                "Fehler beim Speichern der Weichenadresse:",
+                exception
             );
+
+            setError(
+                "Die Weichenadresse konnte nicht gespeichert werden."
+            );
+
         } finally {
             setSaving(false);
         }
@@ -93,133 +113,42 @@ export default function TurnoutDialog({
             }
         >
             <div className="turnout-dialog-field">
-                <label>
-                    Weichentyp
-                </label>
 
-                <div className="turnout-dialog-radio-group">
-                    <label>
-                        <input
-                            type="radio"
-                            name="turnout-hand"
-                            value={
-                                LayoutTurnoutHand.LEFT
-                            }
-                            checked={
-                                turnoutHand ===
-                                LayoutTurnoutHand.LEFT
-                            }
-                            onChange={() =>
-                                setTurnoutHand(
-                                    LayoutTurnoutHand.LEFT
-                                )
-                            }
-                        />
-
-                        Links
-                    </label>
-
-                    <label>
-                        <input
-                            type="radio"
-                            name="turnout-hand"
-                            value={
-                                LayoutTurnoutHand.RIGHT
-                            }
-                            checked={
-                                turnoutHand ===
-                                LayoutTurnoutHand.RIGHT
-                            }
-                            onChange={() =>
-                                setTurnoutHand(
-                                    LayoutTurnoutHand.RIGHT
-                                )
-                            }
-                        />
-
-                        Rechts
-                    </label>
-                </div>
-            </div>
-
-            <div className="turnout-dialog-field">
-                <label htmlFor="turnout-orientation">
-                    Ausrichtung
-                </label>
-
-                <select
-                    id="turnout-orientation"
-                    value={orientation}
-                    onChange={(event) =>
-                        setOrientation(
-                            event.target.value
-                        )
-                    }
+                <label
+                    htmlFor="turnout-address"
                 >
-                    <option
-                        value={
-                            LayoutOrientation.NORTH
-                        }
-                    >
-                        Norden
-                    </option>
+                    Adresse
+                </label>
 
-                    <option
-                        value={
-                            LayoutOrientation.NORTH_EAST
-                        }
-                    >
-                        Nordost
-                    </option>
+                <input
+                    id="turnout-address"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={
+                        digitalAddress
+                    }
+                    onChange={(
+                        event
+                    ) => {
+                        setDigitalAddress(
+                            event.target.value
+                        );
 
-                    <option
-                        value={
-                            LayoutOrientation.EAST
+                        if (error) {
+                            setError(null);
                         }
-                    >
-                        Osten
-                    </option>
+                    }}
+                    disabled={saving}
+                    autoFocus
+                />
 
-                    <option
-                        value={
-                            LayoutOrientation.SOUTH_EAST
-                        }
-                    >
-                        Südost
-                    </option>
+                {error && (
+                    <div className="turnout-dialog-error">
+                        {error}
+                    </div>
+                )}
 
-                    <option
-                        value={
-                            LayoutOrientation.SOUTH
-                        }
-                    >
-                        Süden
-                    </option>
-
-                    <option
-                        value={
-                            LayoutOrientation.SOUTH_WEST
-                        }
-                    >
-                        Südwest
-                    </option>
-
-                    <option
-                        value={
-                            LayoutOrientation.WEST
-                        }
-                    >
-                        Westen
-                    </option>
-
-                    <option
-                        value={
-                            LayoutOrientation.NORTH_WEST
-                        }
-                    >
-                        Nordwest
-                    </option>
-                </select>
             </div>
         </Dialog>
     );
