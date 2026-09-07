@@ -18,6 +18,7 @@ export function LayoutEditor({
   initialLayout,
   tool,
   setTool,
+  editMode,
 }) {
   const [layout, setLayout] =
     useState(initialLayout);
@@ -1334,11 +1335,11 @@ export function LayoutEditor({
 
   return (
     <div className="layout-editor">
-
       <div className="layout-editor-canvas">
         <LayoutGrid
           layout={layout}
           tool={tool}
+          editMode={editMode}
           onStrokeComplete={
             handleStrokeComplete
           }

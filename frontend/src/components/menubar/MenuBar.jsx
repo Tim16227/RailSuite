@@ -204,6 +204,8 @@ const menuNames = [
 ];
 
 export default function MenuBar({
+    editMode,
+    setEditMode,
     tool,
     setTool,
 }) {
@@ -251,6 +253,37 @@ export default function MenuBar({
                         </button>
                     )
                 )}
+            </div>
+
+            <div className="edit-mode-area">
+                <button
+                    type="button"
+                    className={
+                        editMode
+                            ? "edit-mode-button active"
+                            : "edit-mode-button"
+                    }
+                    onClick={() =>
+                        setEditMode(
+                            (current) => !current
+                        )
+                    }
+                    title={
+                        editMode
+                            ? "Editiermodus beenden"
+                            : "Editiermodus aktivieren"
+                    }
+                >
+                    <span className="edit-mode-icon">
+                        {editMode ? "🔧" : "▶️"}
+                    </span>
+
+                    <span>
+                        {editMode
+                            ? "Editiermodus"
+                            : "Betrieb"}
+                    </span>
+                </button>
             </div>
 
             {/* Toolbereich */}

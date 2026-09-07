@@ -8,12 +8,9 @@ import {
     Navigate,
 } from "react-router-dom";
 
-import {
-    Tool,
-} from "./models/layout";
-
 import MenuBar from "./components/menubar/MenuBar";
 import LayoutPage from "./pages/LayoutPage";
+
 import Z21TestPanel from "./components/digital/Z21TestPanel";
 
 import {
@@ -23,17 +20,16 @@ import {
 import "react-toastify/dist/ReactToastify.css";
 
 export default function App() {
-    const [tool, setTool] = useState(
-        Tool.PEN
-    );
+    const [editMode, setEditMode] =
+        useState(false);
 
     return (
         <>
             <ToastContainer />
 
             <MenuBar
-                tool={tool}
-                setTool={setTool}
+                editMode={editMode}
+                setEditMode={setEditMode}
             />
 
             <Routes>
@@ -51,8 +47,7 @@ export default function App() {
                     path="/layouts"
                     element={
                         <LayoutPage
-                            tool={tool}
-                            setTool={setTool}
+                            editMode={editMode}
                         />
                     }
                 />

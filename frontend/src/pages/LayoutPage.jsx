@@ -13,8 +13,7 @@ import {
 } from "../components/layout/LayoutEditor";
 
 export default function LayoutPage({
-    tool,
-    setTool,
+    editMode,
 }) {
     const [layout, setLayout] =
         useState(null);
@@ -88,8 +87,7 @@ export default function LayoutPage({
     return (
         <LayoutEditor
             initialLayout={layout}
-            tool={tool}
-            setTool={setTool}
+            editMode={editMode}
         />
     );
 }

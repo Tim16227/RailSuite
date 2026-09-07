@@ -12,6 +12,7 @@ const CELL_SIZE = 40;
 export function LayoutGrid({
   layout,
   tool,
+  editMode,
   onStrokeComplete,
   onCellAction,
 }) {
@@ -439,6 +440,11 @@ export function LayoutGrid({
       );
 
     if (!cell) {
+      return;
+    }
+
+    if (!editMode) {
+      onCellAction(cell);
       return;
     }
 
