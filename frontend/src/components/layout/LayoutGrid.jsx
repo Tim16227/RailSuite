@@ -26,6 +26,7 @@ export function LayoutGrid({
     editMode,
     onStrokeComplete,
     onCellAction,
+    onTurnoutDoubleClick,
 }) {
     const svgRef =
         useRef(null);
@@ -617,6 +618,45 @@ export function LayoutGrid({
         });
     }
 
+        function handleDoubleClick(
+            event
+        ) {
+            if (!editMode) {
+                return;
+            }
+
+            const cell =
+                getCellFromPointer(
+                    event
+                );
+
+            if (!cell) {
+                return;
+            }
+
+            const layoutCell =
+                findCell(cell);
+
+            if (
+                !layoutCell ||
+                layoutCell.elementType !==
+                    LayoutElementType.TURNOUT
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (
+                onTurnoutDoubleClick
+            ) {
+                onTurnoutDoubleClick(
+                    layoutCell
+                );
+            }
+        }
+
     function handlePointerDown(
         event
     ) {
@@ -998,6 +1038,9 @@ export function LayoutGrid({
                 }
                 onPointerCancel={
                     handlePointerCancel
+                }
+                onDoubleClick={
+                    handleDoubleClick
                 }
             >
                 {layout.cells.map(

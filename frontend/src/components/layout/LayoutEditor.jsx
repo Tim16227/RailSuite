@@ -12,6 +12,8 @@ import {
   deleteLayoutCell,
 } from "../../api/layoutApi";
 
+import useDialogs from "../dialog/utils/useDialogs";
+
 import { LayoutGrid } from "./LayoutGrid";
 
 export function LayoutEditor({
@@ -23,8 +25,38 @@ export function LayoutEditor({
   const [layout, setLayout] =
     useState(initialLayout);
 
+  const {
+      open,
+  } = useDialogs();
+
   const processingStrokeRef =
     useRef(false);
+
+  function handleTurnoutDoubleClick(
+      cell
+  ) {
+      if (!editMode) {
+          return;
+      }
+
+      if (
+          !cell ||
+          cell.elementType !==
+              LayoutElementType.TURNOUT
+      ) {
+          return;
+      }
+
+      open(
+          "layout-turnout",
+          {
+              layoutId: layout.id,
+              cell,
+              onSaved:
+                  updateCell,
+          }
+      );
+  }
 
   async function handleStrokeComplete(
     points
@@ -1337,15 +1369,18 @@ export function LayoutEditor({
     <div className="layout-editor">
       <div className="layout-editor-canvas">
         <LayoutGrid
-          layout={layout}
-          tool={tool}
-          editMode={editMode}
-          onStrokeComplete={
-            handleStrokeComplete
-          }
-          onCellAction={
-            handleCellAction
-          }
+            layout={layout}
+            tool={tool}
+            editMode={editMode}
+            onStrokeComplete={
+                handleStrokeComplete
+            }
+            onCellAction={
+                handleCellAction
+            }
+            onTurnoutDoubleClick={
+                handleTurnoutDoubleClick
+            }
         />
       </div>
     </div>

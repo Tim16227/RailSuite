@@ -1,0 +1,36 @@
+.turnout-dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.turnout-dialog-field > label {
+    font-weight: 600;
+}
+
+.turnout-dialog-field select {
+    width: 100%;
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid #c8c8c8;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+}
+
+.turnout-dialog-radio-group {
+    display: flex;
+    gap: 24px;
+}
+
+.turnout-dialog-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.turnout-dialog-radio-group input {
+    margin: 0;
+}

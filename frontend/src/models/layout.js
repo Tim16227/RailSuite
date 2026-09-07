@@ -23,6 +23,8 @@ export const LayoutTurnoutHand = {
 };
 
 export const Tool = {
+  NONE: "NONE",
+
   PEN: "PEN",
   ERASER: "ERASER",
   STRAIGHT: "STRAIGHT",

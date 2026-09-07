@@ -8,6 +8,35 @@ export function LayoutToolbar({
 }) {
   return (
     <div className="layout-toolbar">
+
+      {/* =========================
+          Auswahl / kein Werkzeug
+          ========================= */}
+
+      <div className="toolbar-group">
+        <button
+          type="button"
+          className={
+            tool === Tool.NONE
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setTool(Tool.NONE)
+          }
+          title="Kein Werkzeug"
+          aria-label="Kein Werkzeug"
+        >
+          ↖
+        </button>
+      </div>
+
+      <div className="toolbar-separator" />
+
+      {/* =========================
+          Zeichnen / Löschen
+          ========================= */}
+
       <div className="toolbar-group">
         <button
           type="button"
@@ -43,6 +72,10 @@ export function LayoutToolbar({
       </div>
 
       <div className="toolbar-separator" />
+
+      {/* =========================
+          Elemente
+          ========================= */}
 
       <div className="toolbar-group">
         <button
@@ -101,7 +134,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.TURNOUT_LEFT)
+            setTool(
+              Tool.TURNOUT_LEFT
+            )
           }
           title="Weiche links"
           aria-label="Weiche links"
@@ -117,7 +152,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.TURNOUT_RIGHT)
+            setTool(
+              Tool.TURNOUT_RIGHT
+            )
           }
           title="Weiche rechts"
           aria-label="Weiche rechts"
@@ -128,6 +165,10 @@ export function LayoutToolbar({
 
       <div className="toolbar-separator" />
 
+      {/* =========================
+          Drehen
+          ========================= */}
+
       <div className="toolbar-group">
         <button
           type="button"
@@ -137,7 +178,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.ROTATE_CCW)
+            setTool(
+              Tool.ROTATE_CCW
+            )
           }
           title="45° gegen den Uhrzeigersinn drehen"
           aria-label="45° gegen den Uhrzeigersinn drehen"
@@ -153,7 +196,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.ROTATE_CW)
+            setTool(
+              Tool.ROTATE_CW
+            )
           }
           title="45° im Uhrzeigersinn drehen"
           aria-label="45° im Uhrzeigersinn drehen"

@@ -16,6 +16,12 @@ import MenuBar from "./components/menubar/MenuBar";
 import LayoutPage from "./pages/LayoutPage";
 import Z21TestPanel from "./components/digital/Z21TestPanel";
 
+import DialogManager from "./components/dialog/utils/DialogManager";
+
+import {
+    DialogProvider,
+} from "./components/dialog/utils/DialogProvider";
+
 import {
     ToastContainer,
 } from "react-toastify";
@@ -23,27 +29,17 @@ import {
 import "react-toastify/dist/ReactToastify.css";
 
 export default function App() {
-    /*
-     * Aktuell ausgewähltes Layout-Werkzeug.
-     *
-     * Wichtig:
-     * Dieser State bleibt unabhängig vom Editiermodus.
-     */
+
     const [tool, setTool] = useState(
-        Tool.PEN
+        Tool.NONE
     );
 
-    /*
-     * Globaler Editiermodus.
-     *
-     * true  = Layout darf verändert werden
-     * false = Betriebsmodus / Layout geschützt
-     */
     const [editMode, setEditMode] =
         useState(false);
 
     return (
-        <>
+        <DialogProvider>
+
             <ToastContainer />
 
             <MenuBar
@@ -54,6 +50,7 @@ export default function App() {
             />
 
             <Routes>
+
                 <Route
                     path="/"
                     element={
@@ -81,7 +78,11 @@ export default function App() {
                         <Z21TestPanel />
                     }
                 />
+
             </Routes>
-        </>
+
+            <DialogManager />
+
+        </DialogProvider>
     );
 }
