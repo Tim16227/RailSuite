@@ -179,8 +179,7 @@ export function LayoutGrid({
          */
         if (
             cell.digitalSystem == null ||
-            cell.digitalAddress == null ||
-            cell.digitalPort == null
+            cell.digitalAddress == null
         ) {
             console.warn(
                 "Weiche besitzt keine digitale Zuordnung:",

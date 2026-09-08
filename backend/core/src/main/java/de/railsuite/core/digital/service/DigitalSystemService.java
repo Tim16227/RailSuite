@@ -7,6 +7,7 @@ import de.railsuite.core.digital.entity.DigitalInterfaceType;
 import de.railsuite.core.digital.entity.DigitalSystem;
 import de.railsuite.core.digital.exception.DigitalSystemNotFoundException;
 import de.railsuite.core.digital.mapper.DigitalSystemMapper;
+import de.railsuite.core.digital.protocol.z21.Z21TurnoutListener;
 import de.railsuite.core.digital.repository.DigitalSystemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,12 +22,16 @@ public class DigitalSystemService {
     private final DigitalSystemRepository repository;
     private final DigitalSystemMapper mapper;
 
+    private final Z21TurnoutListener z21TurnoutListener;
+
     public DigitalSystemService(
             DigitalSystemRepository repository,
-            DigitalSystemMapper mapper
+            DigitalSystemMapper mapper,
+            Z21TurnoutListener z21TurnoutListener
     ) {
         this.repository = repository;
         this.mapper = mapper;
+        this.z21TurnoutListener = z21TurnoutListener;
     }
 
     @Transactional(readOnly = true)
@@ -62,7 +67,16 @@ public class DigitalSystemService {
                 request.port()
         );
 
-        return mapper.toResponse(repository.save(digitalSystem));
+        DigitalSystem saved =
+                repository.save(
+                        digitalSystem
+                );
+
+        z21TurnoutListener.register(
+                saved
+        );
+
+        return mapper.toResponse(saved);
     }
 
     public DigitalSystemResponse updateDigitalSystem(
@@ -88,12 +102,31 @@ public class DigitalSystemService {
                 request.port()
         );
 
-        return mapper.toResponse(repository.save(digitalSystem));
+        DigitalSystem saved =
+                repository.save(
+                        digitalSystem
+                );
+
+        z21TurnoutListener.register(
+                saved
+        );
+
+        return mapper.toResponse(saved);
     }
 
-    public void deleteDigitalSystem(UUID id) {
-        DigitalSystem digitalSystem = findById(id);
-        repository.delete(digitalSystem);
+    public void deleteDigitalSystem(
+            UUID id
+    ) {
+        DigitalSystem digitalSystem =
+                findById(id);
+
+        z21TurnoutListener.unregister(
+                id
+        );
+
+        repository.delete(
+                digitalSystem
+        );
     }
 
     private DigitalSystem findById(UUID id) {

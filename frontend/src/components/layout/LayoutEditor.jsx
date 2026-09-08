@@ -1,4 +1,8 @@
-import { useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import {
   LayoutElementType,
@@ -11,6 +15,10 @@ import {
   setLayoutCell,
   deleteLayoutCell,
 } from "../../api/layoutApi";
+
+import {
+  listenToTurnoutEvents,
+} from "../../api/digitalEvents";
 
 import useDialogs from "../dialog/utils/useDialogs";
 
@@ -26,36 +34,130 @@ export function LayoutEditor({
     useState(initialLayout);
 
   const {
-      open,
+    open,
   } = useDialogs();
 
   const processingStrokeRef =
     useRef(false);
 
-  function handleTurnoutDoubleClick(
-      cell
+  function handleTurnoutEvent(
+    event
   ) {
-      if (!editMode) {
-          return;
-      }
+    if (
+      !event ||
+      event.digitalAddress == null
+    ) {
+      return;
+    }
 
-      if (
-          !cell ||
-          cell.elementType !==
-              LayoutElementType.TURNOUT
+    setLayout(
+      (current) => ({
+        ...current,
+
+        cells:
+          current.cells.map(
+            (cell) => {
+
+              if (
+                cell.elementType !==
+                LayoutElementType.TURNOUT
+              ) {
+                return cell;
+              }
+
+              if (
+                cell.digitalSystem?.id !==
+                event.digitalSystemId
+              ) {
+                return cell;
+              }
+
+              if (
+                cell.digitalAddress !==
+                event.digitalAddress
+              ) {
+                return cell;
+              }
+
+              return {
+                ...cell,
+                turnoutState:
+                  event.state,
+              };
+            }
+          ),
+      })
+    );
+  }
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function listen() {
+      while (
+        !controller.signal.aborted
       ) {
-          return;
-      }
+        try {
+          await listenToTurnoutEvents(
+            handleTurnoutEvent,
+            controller.signal
+          );
 
-      open(
-          "layout-turnout",
-          {
-              layoutId: layout.id,
-              cell,
-              onSaved:
-                  updateCell,
+        } catch (error) {
+          if (
+            controller.signal.aborted
+          ) {
+            return;
           }
-      );
+
+          console.error(
+            "Z21 Turnout Listener getrennt:",
+            error
+          );
+
+          await new Promise(
+            (resolve) =>
+              setTimeout(
+                resolve,
+                2000
+              )
+          );
+        }
+      }
+    }
+
+    listen();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  function handleTurnoutDoubleClick(
+    cell
+  ) {
+    if (!editMode) {
+      return;
+    }
+
+    if (
+      !cell ||
+      cell.elementType !==
+        LayoutElementType.TURNOUT
+    ) {
+      return;
+    }
+
+    open(
+      "layout-turnout",
+      {
+        layoutId: layout.id,
+        cell,
+        onSaved:
+          updateCell,
+      }
+    );
   }
 
   async function handleStrokeComplete(

@@ -107,4 +107,23 @@ public final class Z21Protocol {
 
         return result;
     }
+
+    public static byte[] setBroadcastFlags(
+            int flags
+    ) {
+        byte[] packet = new byte[8];
+
+        packet[0] = 0x08;
+        packet[1] = 0x00;
+
+        packet[2] = 0x50;
+        packet[3] = 0x00;
+
+        packet[4] = (byte) (flags & 0xFF);
+        packet[5] = (byte) ((flags >> 8) & 0xFF);
+        packet[6] = (byte) ((flags >> 16) & 0xFF);
+        packet[7] = (byte) ((flags >> 24) & 0xFF);
+
+        return packet;
+    }
 }
