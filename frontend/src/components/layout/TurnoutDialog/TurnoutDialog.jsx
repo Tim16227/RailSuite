@@ -54,7 +54,6 @@ export default function TurnoutDialog({
             setError(
                 "Bitte eine gültige Weichenadresse größer als 0 eingeben."
             );
-
             return;
         }
 
@@ -74,7 +73,7 @@ export default function TurnoutDialog({
                     cell.elementType,
                     cell.orientation,
                     cell.turnoutHand,
-                    selectedDigitalSystemId,
+                    digitalSystemId,
                     address
                 );
 
@@ -85,7 +84,6 @@ export default function TurnoutDialog({
             }
 
             onClose();
-
         } catch (exception) {
             console.error(
                 "Fehler beim Speichern der Weichenadresse:",
@@ -95,7 +93,6 @@ export default function TurnoutDialog({
             setError(
                 "Die Weichenadresse konnte nicht gespeichert werden."
             );
-
         } finally {
             setSaving(false);
         }
