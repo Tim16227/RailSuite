@@ -24,7 +24,6 @@ export const LayoutTurnoutHand = {
 
 export const Tool = {
   NONE: "NONE",
-
   PEN: "PEN",
   ERASER: "ERASER",
   STRAIGHT: "STRAIGHT",
@@ -34,4 +33,5 @@ export const Tool = {
   TURNOUT_RIGHT: "TURNOUT_RIGHT",
   ROTATE_CW: "ROTATE_CW",
   ROTATE_CCW: "ROTATE_CCW",
+  BLOCK: "BLOCK",
 };

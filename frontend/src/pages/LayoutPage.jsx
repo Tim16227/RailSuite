@@ -12,6 +12,10 @@ import {
     LayoutEditor,
 } from "../components/layout/LayoutEditor";
 
+import {
+    BlockEditor,
+} from "../components/layout/BlockEditor";
+
 export default function LayoutPage({
     tool,
     setTool,
@@ -38,17 +42,23 @@ export default function LayoutPage({
             const layouts =
                 await getLayouts();
 
-            if (layouts.length > 0) {
+            if (
+                layouts.length > 0
+            ) {
                 setLayout(
                     layouts[0]
                 );
+
                 return;
             }
 
             const newLayout =
                 await createLayout({
-                    name: "Mein Gleisplan",
+                    name:
+                        "Mein Gleisplan",
+
                     width: 30,
+
                     height: 20,
                 });
 
@@ -91,11 +101,27 @@ export default function LayoutPage({
     }
 
     return (
-        <LayoutEditor
-            initialLayout={layout}
-            tool={tool}
-            setTool={setTool}
-            editMode={editMode}
-        />
+        <>
+            <LayoutEditor
+                initialLayout={
+                    layout
+                }
+                tool={tool}
+                setTool={
+                    setTool
+                }
+                editMode={
+                    editMode
+                }
+            />
+
+            <BlockEditor
+                layout={layout}
+                tool={tool}
+                editMode={
+                    editMode
+                }
+            />
+        </>
     );
 }

@@ -1,0 +1,323 @@
+.block-editor-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+
+  pointer-events: none;
+}
+
+.block-editor-overlay.interactive {
+  pointer-events: auto;
+}
+
+.block-editor-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  display: block;
+
+  overflow: visible;
+
+  touch-action: none;
+}
+
+.block-editor-overlay:not(.interactive)
+  .block-editor-svg {
+  pointer-events: none;
+}
+
+.rail-block {
+  cursor: pointer;
+}
+
+.rail-block rect {
+  fill: rgba(70, 120, 220, 0.12);
+  stroke: rgba(70, 120, 220, 0.55);
+  stroke-width: 2;
+}
+
+.rail-block.active rect {
+  fill: rgba(70, 120, 220, 0.22);
+  stroke: rgba(40, 90, 190, 0.95);
+  stroke-width: 3;
+}
+
+.rail-block-centerline {
+  fill: none;
+  stroke: rgba(70, 120, 220, 0.5);
+  stroke-width: 3;
+  stroke-dasharray: 6 5;
+  pointer-events: none;
+}
+
+.rail-block-draft rect {
+  fill: rgba(40, 180, 90, 0.18);
+  stroke: rgba(40, 150, 80, 0.9);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.rail-block-marker {
+  pointer-events: none;
+}
+
+.rail-block-marker line {
+  stroke: #222;
+  stroke-width: 3;
+}
+
+.rail-block-marker text {
+  font-size: 10px;
+  font-weight: 700;
+  fill: #222;
+}
+
+.rail-block-marker-brake line {
+  stroke: #e08a00;
+}
+
+.rail-block-marker-stop line {
+  stroke: #c02020;
+}
+
+.rail-block-marker-entry line {
+  stroke: #208020;
+}
+
+.rail-block-marker-exit line {
+  stroke: #606060;
+}
+
+.block-editor-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+
+  width: 340px;
+  max-height: calc(100% - 24px);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: auto;
+
+  padding: 12px;
+
+  box-sizing: border-box;
+
+  border: 1px solid #bdbdbd;
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.97);
+
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.18);
+
+  color: #222;
+
+  font-size: 13px;
+}
+
+.block-editor-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 8px;
+
+  font-size: 15px;
+}
+
+.block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  margin-bottom: 8px;
+}
+
+.block-empty {
+  padding: 10px;
+
+  border: 1px dashed #bbb;
+  border-radius: 6px;
+
+  color: #666;
+
+  line-height: 1.4;
+}
+
+.block-list-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+
+  padding: 7px 8px;
+
+  border: 1px solid #ddd;
+  border-radius: 5px;
+
+  background: #fafafa;
+
+  cursor: pointer;
+}
+
+.block-list-item:hover {
+  background: #f0f0f0;
+}
+
+.block-list-item.active {
+  border-color: #6b8fd6;
+  background: #edf3ff;
+}
+
+.block-list-item small {
+  color: #666;
+  white-space: nowrap;
+}
+
+.block-list-item button,
+.block-item button {
+  border: 0;
+  background: transparent;
+
+  color: #888;
+
+  cursor: pointer;
+
+  font-size: 17px;
+  line-height: 1;
+}
+
+.block-list-item button:hover,
+.block-item button:hover {
+  color: #c00;
+}
+
+.block-editor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  margin-top: 10px;
+  padding-top: 10px;
+
+  border-top: 1px solid #ddd;
+}
+
+.block-editor-section h4 {
+  margin: 0;
+
+  font-size: 14px;
+}
+
+.block-editor-section label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  font-weight: 600;
+}
+
+.block-editor-section input,
+.block-editor-section select {
+  box-sizing: border-box;
+
+  width: 100%;
+
+  min-height: 34px;
+
+  padding: 6px 8px;
+
+  border: 1px solid #c7c7c7;
+  border-radius: 5px;
+
+  background: white;
+
+  font: inherit;
+}
+
+.block-editor-section input:focus,
+.block-editor-section select:focus {
+  outline: none;
+  border-color: #6b8fd6;
+}
+
+.block-primary-button,
+.block-secondary-button {
+  min-height: 36px;
+
+  padding: 7px 10px;
+
+  border: 1px solid #777;
+  border-radius: 5px;
+
+  cursor: pointer;
+
+  font: inherit;
+}
+
+.block-primary-button {
+  background: #315fa8;
+  color: white;
+  border-color: #315fa8;
+}
+
+.block-primary-button:hover {
+  background: #274d89;
+}
+
+.block-secondary-button {
+  background: #f2f2f2;
+  color: #222;
+}
+
+.block-secondary-button:hover {
+  background: #e5e5e5;
+}
+
+.block-info {
+  padding: 8px;
+
+  border-radius: 5px;
+
+  background: #f4f4f4;
+
+  color: #555;
+
+  line-height: 1.5;
+}
+
+.block-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.block-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 8px;
+
+  padding: 6px 7px;
+
+  border: 1px solid #ddd;
+  border-radius: 5px;
+
+  background: #fafafa;
+}
+
+.block-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block-detector-hint {
+  color: #777;
+  font-size: 12px;
+}

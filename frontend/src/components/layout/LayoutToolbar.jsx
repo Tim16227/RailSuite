@@ -9,10 +9,6 @@ export function LayoutToolbar({
   return (
     <div className="layout-toolbar">
 
-      {/* =========================
-          Auswahl / kein Werkzeug
-          ========================= */}
-
       <div className="toolbar-group">
         <button
           type="button"
@@ -32,10 +28,6 @@ export function LayoutToolbar({
       </div>
 
       <div className="toolbar-separator" />
-
-      {/* =========================
-          Zeichnen / Löschen
-          ========================= */}
 
       <div className="toolbar-group">
         <button
@@ -73,10 +65,6 @@ export function LayoutToolbar({
 
       <div className="toolbar-separator" />
 
-      {/* =========================
-          Elemente
-          ========================= */}
-
       <div className="toolbar-group">
         <button
           type="button"
@@ -86,7 +74,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.STRAIGHT)
+            setTool(
+              Tool.STRAIGHT
+            )
           }
           title="Gerade"
           aria-label="Gerade"
@@ -102,7 +92,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.CURVE_45)
+            setTool(
+              Tool.CURVE_45
+            )
           }
           title="45° Kurve"
           aria-label="45° Kurve"
@@ -118,7 +110,9 @@ export function LayoutToolbar({
               : ""
           }
           onClick={() =>
-            setTool(Tool.CURVE_90)
+            setTool(
+              Tool.CURVE_90
+            )
           }
           title="90° Kurve"
           aria-label="90° Kurve"
@@ -129,7 +123,8 @@ export function LayoutToolbar({
         <button
           type="button"
           className={
-            tool === Tool.TURNOUT_LEFT
+            tool ===
+            Tool.TURNOUT_LEFT
               ? "active"
               : ""
           }
@@ -147,7 +142,8 @@ export function LayoutToolbar({
         <button
           type="button"
           className={
-            tool === Tool.TURNOUT_RIGHT
+            tool ===
+            Tool.TURNOUT_RIGHT
               ? "active"
               : ""
           }
@@ -164,10 +160,6 @@ export function LayoutToolbar({
       </div>
 
       <div className="toolbar-separator" />
-
-      {/* =========================
-          Drehen
-          ========================= */}
 
       <div className="toolbar-group">
         <button
@@ -204,6 +196,28 @@ export function LayoutToolbar({
           aria-label="45° im Uhrzeigersinn drehen"
         >
           ↷
+        </button>
+      </div>
+
+      <div className="toolbar-separator" />
+
+      <div className="toolbar-group">
+        <button
+          type="button"
+          className={
+            tool === Tool.BLOCK
+              ? "active"
+              : ""
+          }
+          onClick={() =>
+            setTool(
+              Tool.BLOCK
+            )
+          }
+          title="Block bearbeiten"
+          aria-label="Block bearbeiten"
+        >
+          ▣
         </button>
       </div>
     </div>
