@@ -1,0 +1,99 @@
+.contact-detector-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    min-width: 430px;
+}
+
+.contact-detector-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    padding: 14px;
+
+    border: 1px solid #d1d1d1;
+    border-radius: 7px;
+
+    background: #fafafa;
+}
+
+.contact-detector-section h4 {
+    margin: 0;
+
+    font-size: 14px;
+}
+
+.contact-detector-section label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.contact-detector-section input,
+.contact-detector-section select {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    min-height: 36px;
+
+    padding: 7px 9px;
+
+    border: 1px solid #c8c8c8;
+    border-radius: 5px;
+
+    background: white;
+
+    color: #222;
+
+    font: inherit;
+}
+
+.contact-detector-section input:focus,
+.contact-detector-section select:focus {
+    outline: none;
+
+    border-color: #777;
+
+    box-shadow:
+        0 0 0 1px #777;
+}
+
+.contact-detector-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    padding: 8px 10px;
+
+    border-radius: 5px;
+
+    background: #f0f0f0;
+
+    color: #555;
+
+    font-size: 13px;
+}
+
+.contact-detector-info strong {
+    color: #222;
+}
+
+.contact-detector-error {
+    padding: 10px 12px;
+
+    border-radius: 6px;
+
+    background: #fbecec;
+
+    color: #9b1c1c;
+
+    font-size: 13px;
+}

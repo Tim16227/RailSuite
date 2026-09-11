@@ -149,10 +149,13 @@ public class BlockService {
         BlockMarker marker =
                 new BlockMarker(
                         block,
+                        null,
                         request.type(),
                         request.positionMm(),
                         request.lengthMm(),
-                        request.direction()
+                        request.direction(),
+                        BlockMarkerTrainPosition.FRONT,
+                        false
                 );
 
         markerRepository.save(marker);
@@ -176,10 +179,13 @@ public class BlockService {
         );
 
         marker.update(
+                null,
                 request.type(),
                 request.positionMm(),
                 request.lengthMm(),
-                request.direction()
+                request.direction(),
+                marker.getTrainPosition(),
+                marker.isScheduledStop()
         );
 
         return toMarkerResponse(marker);
@@ -245,6 +251,55 @@ public class BlockService {
         );
     }
 
+    public ContactDetectorResponse
+    updateContactDetector(
+            UUID layoutId,
+            UUID detectorId,
+            UpdateContactDetectorRequest request
+    ) {
+        Layout layout =
+                findLayout(layoutId);
+
+        ContactDetector detector =
+                detectorRepository
+                        .findById(detectorId)
+                        .orElseThrow();
+
+        if (
+                !detector.getLayout()
+                        .getId()
+                        .equals(
+                                layout.getId()
+                        )
+        ) {
+            throw new IllegalArgumentException(
+                    "Contact detector belongs to another layout"
+            );
+        }
+
+        DigitalSystem system =
+                resolveDigitalSystem(
+                        request.digitalSystemId()
+                );
+
+        validateDetector(
+                request.type(),
+                system,
+                request.digitalAddress()
+        );
+
+        detector.update(
+                request.name().trim(),
+                request.type(),
+                system,
+                request.digitalAddress()
+        );
+
+        return toDetectorResponse(
+                detector
+        );
+    }
+
     public void deleteContactDetector(
             UUID detectorId
     ) {
@@ -273,24 +328,24 @@ public class BlockService {
                         )
                         .orElseThrow();
 
-        if (!detector.getLayout()
-                .getId()
-                .equals(
-                        block.getLayout().getId()
-                )) {
+        if (
+                !detector.getLayout()
+                        .getId()
+                        .equals(
+                                block.getLayout().getId()
+                        )
+        ) {
             throw new IllegalArgumentException(
                     "Contact detector belongs to another layout"
             );
         }
 
         if (
-                request.positionMm() != null
-                        &&
+                request.positionMm() != null &&
                         (
-                                request.positionMm() < 0
-                                        ||
-                                        request.positionMm()
-                                                > block.getLengthMm()
+                                request.positionMm() < 0 ||
+                                        request.positionMm() >
+                                                block.getLengthMm()
                         )
         ) {
             throw new IllegalArgumentException(
@@ -371,16 +426,16 @@ public class BlockService {
         }
 
         if (
-                lengthMm <= 0
+                lengthMm < 0
         ) {
             throw new IllegalArgumentException(
-                    "Marker length must be greater than zero"
+                    "Marker length must not be negative"
             );
         }
 
         if (
-                positionMm + lengthMm
-                        > block.getLengthMm()
+                positionMm + lengthMm >
+                        block.getLengthMm()
         ) {
             throw new IllegalArgumentException(
                     "Marker exceeds block length"
@@ -475,11 +530,12 @@ public class BlockService {
         List<BlockCellRequest> cells =
                 block.getCells()
                         .stream()
-                        .map(cell ->
-                                new BlockCellRequest(
-                                        cell.getX(),
-                                        cell.getY()
-                                )
+                        .map(
+                                cell ->
+                                        new BlockCellRequest(
+                                                cell.getX(),
+                                                cell.getY()
+                                        )
                         )
                         .toList();
 
@@ -491,8 +547,7 @@ public class BlockService {
 
         List<BlockContactAssignmentResponse>
                 contacts =
-                block
-                        .getContactAssignments()
+                block.getContactAssignments()
                         .stream()
                         .map(
                                 this::toAssignmentResponse

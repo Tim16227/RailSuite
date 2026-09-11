@@ -106,18 +106,33 @@ public class BlockEditorService {
                         blockId
                 );
 
+        BlockContactAssignment assignment =
+                resolveAssignment(
+                        block,
+                        request.contactAssignmentId()
+                );
+
         validateMarker(
                 block,
+                assignment,
+                request.type(),
                 request.positionMm(),
                 request.lengthMm()
         );
 
+        int length =
+                request.type() ==
+                        BlockMarkerType.STOP
+                        ? 0
+                        : request.lengthMm();
+
         BlockMarker marker =
                 new BlockMarker(
                         block,
+                        assignment,
                         request.type(),
                         request.positionMm(),
-                        request.lengthMm(),
+                        length,
                         request.direction(),
                         request.trainPosition(),
                         request.scheduledStop()
@@ -155,16 +170,31 @@ public class BlockEditorService {
             );
         }
 
+        BlockContactAssignment assignment =
+                resolveAssignment(
+                        block,
+                        request.contactAssignmentId()
+                );
+
         validateMarker(
                 block,
+                assignment,
+                request.type(),
                 request.positionMm(),
                 request.lengthMm()
         );
 
+        int length =
+                request.type() ==
+                        BlockMarkerType.STOP
+                        ? 0
+                        : request.lengthMm();
+
         marker.update(
+                assignment,
                 request.type(),
                 request.positionMm(),
-                request.lengthMm(),
+                length,
                 request.direction(),
                 request.trainPosition(),
                 request.scheduledStop()
@@ -298,6 +328,102 @@ public class BlockEditorService {
         );
     }
 
+    private BlockContactAssignment
+    resolveAssignment(
+            Block block,
+            UUID assignmentId
+    ) {
+        if (
+                assignmentId == null
+        ) {
+            throw new IllegalArgumentException(
+                    "A marker must belong to a contact detector section"
+            );
+        }
+
+        BlockContactAssignment assignment =
+                assignmentRepository
+                        .findById(
+                                assignmentId
+                        )
+                        .orElseThrow();
+
+        if (
+                !assignment.getBlock()
+                        .getId()
+                        .equals(block.getId())
+        ) {
+            throw new IllegalArgumentException(
+                    "Contact assignment belongs to another block"
+            );
+        }
+
+        if (
+                assignment.getRole() !=
+                        BlockContactRole.OCCUPANCY
+        ) {
+            throw new IllegalArgumentException(
+                    "Markers can only be assigned to occupancy sections"
+            );
+        }
+
+        return assignment;
+    }
+
+    private void validateMarker(
+            Block block,
+            BlockContactAssignment assignment,
+            BlockMarkerType type,
+            int positionMm,
+            int lengthMm
+    ) {
+        int contactLength =
+                assignment.getLengthMm();
+
+        if (
+                positionMm < 0 ||
+                        positionMm > contactLength
+        ) {
+            throw new IllegalArgumentException(
+                    "Marker position is outside the contact section"
+            );
+        }
+
+        if (
+                type ==
+                        BlockMarkerType.STOP
+        ) {
+            if (
+                    positionMm >
+                            contactLength
+            ) {
+                throw new IllegalArgumentException(
+                        "Stop marker is outside the contact section"
+                );
+            }
+
+            return;
+        }
+
+        if (
+                lengthMm <= 0
+        ) {
+            throw new IllegalArgumentException(
+                    "Marker ramp must be greater than zero"
+            );
+        }
+
+        if (
+                positionMm +
+                        lengthMm >
+                        contactLength
+        ) {
+            throw new IllegalArgumentException(
+                    "Marker ramp exceeds the contact section"
+            );
+        }
+    }
+
     private Block findBlock(
             UUID layoutId,
             UUID blockId
@@ -326,31 +452,6 @@ public class BlockEditorService {
         }
 
         return block;
-    }
-
-    private void validateMarker(
-            Block block,
-            int positionMm,
-            int lengthMm
-    ) {
-        if (
-                positionMm < 0 ||
-                        positionMm > block.getLengthMm()
-        ) {
-            throw new IllegalArgumentException(
-                    "Marker position is outside the block"
-            );
-        }
-
-        if (
-                lengthMm <= 0 ||
-                        positionMm + lengthMm >
-                                block.getLengthMm()
-        ) {
-            throw new IllegalArgumentException(
-                    "Marker exceeds block length"
-            );
-        }
     }
 
     private void validateSpeed(
@@ -425,16 +526,22 @@ public class BlockEditorService {
                                 )
                         );
 
-        List<BlockEditorDto.Signal> signalResponses =
+        List<BlockEditorDto.Signal>
+                signalResponses =
                 Arrays.stream(
                                 BlockSignalSide.values()
                         )
                         .map(
                                 side -> {
                                     BlockSignal signal =
-                                            signals.get(side);
+                                            signals.get(
+                                                    side
+                                            );
 
-                                    if (signal == null) {
+                                    if (
+                                            signal ==
+                                                    null
+                                    ) {
                                         return new BlockEditorDto.Signal(
                                                 null,
                                                 side,
@@ -470,11 +577,17 @@ public class BlockEditorService {
         );
     }
 
-    private BlockEditorDto.Marker toMarkerResponse(
+    private BlockEditorDto.Marker
+    toMarkerResponse(
             BlockMarker marker
     ) {
         return new BlockEditorDto.Marker(
                 marker.getId(),
+                marker.getContactAssignment() == null
+                        ? null
+                        : marker
+                        .getContactAssignment()
+                        .getId(),
                 marker.getType(),
                 marker.getPositionMm(),
                 marker.getLengthMm(),
@@ -484,11 +597,13 @@ public class BlockEditorService {
         );
     }
 
-    private BlockEditorDto.Contact toContactResponse(
+    private BlockEditorDto.Contact
+    toContactResponse(
             BlockContactAssignment assignment
     ) {
         ContactDetector detector =
-                assignment.getContactDetector();
+                assignment
+                        .getContactDetector();
 
         return new BlockEditorDto.Contact(
                 assignment.getId(),
@@ -501,7 +616,8 @@ public class BlockEditorService {
         );
     }
 
-    private BlockEditorDto.Signal toSignalResponse(
+    private BlockEditorDto.Signal
+    toSignalResponse(
             BlockSignal signal
     ) {
         return new BlockEditorDto.Signal(

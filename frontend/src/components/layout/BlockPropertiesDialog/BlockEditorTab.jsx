@@ -5,15 +5,14 @@ import {
     useState,
 } from "react";
 
-import {
-    apiFetch,
-} from "../../../api/apiClient";
+import useDialogs from "../../dialog/utils/useDialogs";
 
 import {
     createContactDetector,
     getContactDetectors,
     assignContactDetector,
     deleteContactAssignment,
+    updateContactDetector,
 } from "../../../api/blockApi";
 
 import {
@@ -23,6 +22,10 @@ import {
     updateBlockEditorContact,
     updateBlockEditorSignal,
 } from "../../../api/blockEditorApi";
+
+import {
+    apiFetch,
+} from "../../../api/apiClient";
 
 import {
     BlockContactRole,
@@ -38,32 +41,23 @@ import {
 import "./BlockEditorTab.css";
 
 const AXIS_LENGTH = 760;
+const FLAG_HEIGHT = 42;
+const SIGNAL_WIDTH = 36;
 
 const markerColors = {
-    STOP: "#d73535",
-    BRAKE: "#d7b400",
-    SPEED: "#36a852",
-    ENTRY: "#36a852",
-    EXIT: "#36a852",
+    [BlockMarkerType.STOP]: "#d73535",
+    [BlockMarkerType.BRAKE]: "#d7b400",
+    [BlockMarkerType.SPEED]: "#36a852",
 };
 
-function clamp(
-    value,
-    min,
-    max
-) {
+function clamp(value, min, max) {
     return Math.min(
         max,
-        Math.max(
-            min,
-            value
-        )
+        Math.max(min, value)
     );
 }
 
-function markerLabel(
-    type
-) {
+function markerLabel(type) {
     switch (type) {
         case BlockMarkerType.STOP:
             return "Haltemarkierung";
@@ -74,15 +68,263 @@ function markerLabel(
         case BlockMarkerType.SPEED:
             return "Geschwindigkeitsmarkierung";
 
-        case BlockMarkerType.ENTRY:
-            return "Eintrittsmarkierung";
-
-        case BlockMarkerType.EXIT:
-            return "Austrittsmarkierung";
-
         default:
             return type;
     }
+}
+
+function markerColor(type) {
+    return (
+        markerColors[type] ??
+        "#777"
+    );
+}
+
+function getMarkerDirectionLabel(direction) {
+    if (
+        direction ===
+        BlockDirection.FORWARD
+    ) {
+        return "←";
+    }
+
+    return "→";
+}
+
+function getContactPosition(contact) {
+    return Number.isFinite(
+        Number(contact?.positionMm)
+    )
+        ? Number(contact.positionMm)
+        : 0;
+}
+
+function getContactLength(contact, blockLength) {
+    const value =
+        Number(contact?.lengthMm);
+
+    if (
+        Number.isFinite(value) &&
+        value > 0
+    ) {
+        return value;
+    }
+
+    return Math.max(
+        1,
+        Math.round(
+            blockLength / 4
+        )
+    );
+}
+
+function MarkerFlag({
+    marker,
+    contact,
+    blockLength,
+    orientation,
+    selected,
+    onClick,
+}) {
+    const contactStart =
+        getContactPosition(contact);
+
+    const contactLength =
+        getContactLength(
+            contact,
+            blockLength
+        );
+
+    const distance =
+        clamp(
+            Number(marker.positionMm) || 0,
+            0,
+            contactLength
+        );
+
+    const ramp =
+        marker.type ===
+        BlockMarkerType.STOP
+            ? 0
+            : clamp(
+                  Number(marker.lengthMm) ||
+                      0,
+                  0,
+                  Math.max(
+                      0,
+                      contactLength -
+                          distance
+                  )
+              );
+
+    const total =
+        Math.max(
+            1,
+            contactLength
+        );
+
+    const relativePosition =
+        clamp(
+            (
+                distance +
+                ramp
+            ) /
+                total,
+            0,
+            1
+        );
+
+    const mastPosition =
+        clamp(
+            distance / total,
+            0,
+            1
+        );
+
+    const color =
+        markerColor(
+            marker.type
+        );
+
+    const direction =
+        marker.direction;
+
+    const isForward =
+        direction ===
+        BlockDirection.FORWARD;
+
+    const flagStyle =
+        orientation ===
+        BlockGridOrientation.HORIZONTAL
+            ? {
+                  left: `${mastPosition * 100}%`,
+                  "--flag-ramp":
+                      `${Math.max(
+                          8,
+                          relativePosition *
+                              100 -
+                              mastPosition *
+                                  100
+                      )}%`,
+              }
+            : {
+                  top: `${mastPosition * 100}%`,
+                  "--flag-ramp":
+                      `${Math.max(
+                          8,
+                          relativePosition *
+                              100 -
+                              mastPosition *
+                                  100
+                      )}%`,
+              };
+
+    return (
+        <button
+            type="button"
+            className={[
+                "block-editor-marker-flag",
+                isForward
+                    ? "direction-forward"
+                    : "direction-reverse",
+                selected
+                    ? "selected"
+                    : "",
+            ]
+                .filter(Boolean)
+                .join(" ")}
+            style={{
+                ...flagStyle,
+                "--marker-color":
+                    color,
+            }}
+            title={`${markerLabel(
+                marker.type
+            )} ${getMarkerDirectionLabel(
+                direction
+            )}`}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+            }}
+        >
+            <span className="block-editor-marker-mast" />
+
+            <span
+                className="block-editor-marker-flag-shape"
+            />
+
+            <span className="block-editor-marker-distance">
+                {distance} mm
+            </span>
+
+            {ramp > 0 && (
+                <span className="block-editor-marker-ramp">
+                    {ramp} mm
+                </span>
+            )}
+
+            <span className="block-editor-marker-direction">
+                {getMarkerDirectionLabel(
+                    direction
+                )}
+            </span>
+        </button>
+    );
+}
+
+function BlockSignal({
+    side,
+    signal,
+    orientation,
+    selected,
+    onClick,
+}) {
+    const isStart =
+        side ===
+        BlockSignalSide.START;
+
+    return (
+        <button
+            type="button"
+            className={[
+                "block-editor-signal",
+                isStart
+                    ? "start"
+                    : "end",
+                selected
+                    ? "selected"
+                    : "",
+            ]
+                .filter(Boolean)
+                .join(" ")}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+            }}
+            title={`Blocksignal ${
+                isStart
+                    ? "links"
+                    : "rechts"
+            }`}
+        >
+            <span className="block-editor-signal-body">
+                {signal?.signalType ===
+                BlockSignalType.NONE
+                    ? ""
+                    : signal?.signalType ===
+                        BlockSignalType.TWO_ASPECT
+                      ? "2"
+                      : signal?.signalType ===
+                          BlockSignalType.THREE_ASPECT
+                        ? "3"
+                        : signal?.signalType ===
+                            BlockSignalType.FOUR_ASPECT
+                          ? "4"
+                          : ""}
+            </span>
+        </button>
+    );
 }
 
 export default function BlockEditorTab({
@@ -91,6 +333,10 @@ export default function BlockEditorTab({
     data,
     onDataChanged,
 }) {
+    const {
+        open,
+    } = useDialogs();
+
     const [
         orientation,
         setOrientation,
@@ -129,52 +375,16 @@ export default function BlockEditorTab({
         setDigitalSystems,
     ] = useState([]);
 
-    const [
-        newContactName,
-        setNewContactName,
-    ] = useState("");
-
-    const [
-        newContactSystem,
-        setNewContactSystem,
-    ] = useState("");
-
-    const [
-        newContactAddress,
-        setNewContactAddress,
-    ] = useState("");
-
-    const [
-        error,
-        setError,
-    ] = useState(null);
-
-    const propertiesRef =
-        useRef(null);
-
     const dragRef =
         useRef(null);
 
-    const selectedMarker =
-        data?.markers?.find(
-            (marker) =>
-                marker.id ===
-                selectedMarkerId
-        ) ?? null;
+    const dataRef =
+        useRef(data);
 
-    const selectedContact =
-        data?.contacts?.find(
-            (contact) =>
-                contact.id ===
-                selectedContactId
-        ) ?? null;
-
-    const selectedSignal =
-        data?.signals?.find(
-            (signal) =>
-                signal.side ===
-                selectedSignalSide
-        ) ?? null;
+    useEffect(() => {
+        dataRef.current =
+            data;
+    }, [data]);
 
     const occupancyContacts =
         useMemo(
@@ -189,6 +399,27 @@ export default function BlockEditorTab({
                 ),
             [data?.contacts]
         );
+
+    const selectedContact =
+        occupancyContacts.find(
+            (contact) =>
+                contact.id ===
+                selectedContactId
+        ) ?? null;
+
+    const selectedMarker =
+        data?.markers?.find(
+            (marker) =>
+                marker.id ===
+                selectedMarkerId
+        ) ?? null;
+
+    const selectedSignal =
+        data?.signals?.find(
+            (signal) =>
+                signal.side ===
+                selectedSignalSide
+        ) ?? null;
 
     useEffect(() => {
         let active = true;
@@ -215,30 +446,26 @@ export default function BlockEditorTab({
                 }
 
                 setDetectors(
-                    loadedDetectors ??
-                        []
+                    loadedDetectors ?? []
                 );
 
                 setDigitalSystems(
-                    systems ??
-                        []
+                    systems ?? []
                 );
-            } catch (exception) {
+            } catch (error) {
                 console.error(
                     "Kontaktdaten konnten nicht geladen werden:",
-                    exception
+                    error
                 );
             }
         }
 
-        loadAuxiliaryData();
+        void loadAuxiliaryData();
 
         return () => {
             active = false;
         };
-    }, [
-        layoutId,
-    ]);
+    }, [layoutId]);
 
     useEffect(() => {
         setOrientation(
@@ -257,29 +484,27 @@ export default function BlockEditorTab({
         setSelectedSignalSide(
             null
         );
-    }, [
-        data?.id,
-    ]);
 
-    function updateData(
-        patch
-    ) {
-        if (
-            onDataChanged
-        ) {
-            onDataChanged({
-                ...data,
-                ...patch,
-            });
+        setTool(
+            "NONE"
+        );
+    }, [data?.id]);
+
+    function updateData(patch) {
+        if (!onDataChanged) {
+            return;
         }
+
+        onDataChanged({
+            ...dataRef.current,
+            ...patch,
+        });
     }
 
     async function changeOrientation(
         value
     ) {
-        setOrientation(
-            value
-        );
+        setOrientation(value);
 
         try {
             const response =
@@ -317,25 +542,49 @@ export default function BlockEditorTab({
             const updated =
                 await response.json();
 
-            updateData(
-                updated
-            );
-        } catch (exception) {
+            updateData(updated);
+        } catch (error) {
             console.error(
                 "Ausrichtung konnte nicht gespeichert werden:",
-                exception
-            );
-
-            setError(
-                "Die Ausrichtung konnte nicht gespeichert werden."
+                error
             );
         }
+    }
+
+    function getContactSectionLength(
+        contact
+    ) {
+        return getContactLength(
+            contact,
+            data.lengthMm
+        );
     }
 
     async function createMarker(
         type,
         direction
     ) {
+        if (!selectedContact) {
+            return;
+        }
+
+        const contactLength =
+            getContactSectionLength(
+                selectedContact
+            );
+
+        const lengthMm =
+            type ===
+            BlockMarkerType.STOP
+                ? 0
+                : Math.min(
+                      100,
+                      Math.max(
+                          1,
+                          contactLength
+                      )
+                  );
+
         try {
             const marker =
                 await createBlockEditorMarker(
@@ -343,24 +592,21 @@ export default function BlockEditorTab({
                     blockId,
                     {
                         type,
-                        positionMm:
-                            Math.round(
-                                data.lengthMm /
-                                    2
-                            ),
-                        lengthMm: 100,
+                        contactAssignmentId:
+                            selectedContact.id,
+                        positionMm: 0,
+                        lengthMm,
                         direction,
                         trainPosition:
                             BlockMarkerTrainPosition.FRONT,
                         scheduledStop:
-                            type ===
-                            BlockMarkerType.STOP,
+                            false,
                     }
                 );
 
             updateData({
                 markers: [
-                    ...(data.markers ??
+                    ...(dataRef.current.markers ??
                         []),
                     marker,
                 ],
@@ -370,21 +616,17 @@ export default function BlockEditorTab({
                 marker.id
             );
 
-            setSelectedContactId(
-                null
+            setTool(
+                "PROPERTIES"
             );
 
             setSelectedSignalSide(
                 null
             );
-        } catch (exception) {
+        } catch (error) {
             console.error(
                 "Markierung konnte nicht angelegt werden:",
-                exception
-            );
-
-            setError(
-                "Die Markierung konnte nicht angelegt werden."
+                error
             );
         }
     }
@@ -393,6 +635,58 @@ export default function BlockEditorTab({
         marker,
         patch
     ) {
+        const contact =
+            occupancyContacts.find(
+                (item) =>
+                    item.id ===
+                    (
+                        patch.contactAssignmentId ??
+                        marker.contactAssignmentId
+                    )
+            );
+
+        if (!contact) {
+            return;
+        }
+
+        const contactLength =
+            getContactSectionLength(
+                contact
+            );
+
+        const positionMm =
+            clamp(
+                Number(
+                    patch.positionMm ??
+                        marker.positionMm
+                ),
+                0,
+                contactLength
+            );
+
+        const isStop =
+            (
+                patch.type ??
+                marker.type
+            ) ===
+            BlockMarkerType.STOP;
+
+        const lengthMm =
+            isStop
+                ? 0
+                : clamp(
+                      Number(
+                          patch.lengthMm ??
+                              marker.lengthMm
+                      ),
+                      1,
+                      Math.max(
+                          1,
+                          contactLength -
+                              positionMm
+                      )
+                  );
+
         try {
             const updated =
                 await updateBlockEditorMarker(
@@ -402,12 +696,10 @@ export default function BlockEditorTab({
                         type:
                             patch.type ??
                             marker.type,
-                        positionMm:
-                            patch.positionMm ??
-                            marker.positionMm,
-                        lengthMm:
-                            patch.lengthMm ??
-                            marker.lengthMm,
+                        contactAssignmentId:
+                            contact.id,
+                        positionMm,
+                        lengthMm,
                         direction:
                             patch.direction ??
                             marker.direction,
@@ -422,7 +714,11 @@ export default function BlockEditorTab({
 
             updateData({
                 markers:
-                    data.markers.map(
+                    (
+                        dataRef.current
+                            .markers ??
+                        []
+                    ).map(
                         (item) =>
                             item.id ===
                             updated.id
@@ -430,22 +726,16 @@ export default function BlockEditorTab({
                                 : item
                     ),
             });
-        } catch (exception) {
+        } catch (error) {
             console.error(
-                "Markierung konnte nicht aktualisiert werden:",
-                exception
-            );
-
-            setError(
-                "Die Markierung konnte nicht gespeichert werden."
+                "Markierung konnte nicht gespeichert werden:",
+                error
             );
         }
     }
 
     async function removeSelected() {
-        if (
-            selectedMarker
-        ) {
+        if (selectedMarker) {
             try {
                 await deleteBlockEditorMarker(
                     layoutId,
@@ -454,7 +744,11 @@ export default function BlockEditorTab({
 
                 updateData({
                     markers:
-                        data.markers.filter(
+                        (
+                            dataRef.current
+                                .markers ??
+                            []
+                        ).filter(
                             (marker) =>
                                 marker.id !==
                                 selectedMarker.id
@@ -464,19 +758,17 @@ export default function BlockEditorTab({
                 setSelectedMarkerId(
                     null
                 );
-            } catch (exception) {
+            } catch (error) {
                 console.error(
                     "Markierung konnte nicht gelöscht werden:",
-                    exception
+                    error
                 );
             }
 
             return;
         }
 
-        if (
-            selectedContact
-        ) {
+        if (selectedContact) {
             try {
                 await deleteContactAssignment(
                     layoutId,
@@ -485,7 +777,11 @@ export default function BlockEditorTab({
 
                 updateData({
                     contacts:
-                        data.contacts.filter(
+                        (
+                            dataRef.current
+                                .contacts ??
+                            []
+                        ).filter(
                             (contact) =>
                                 contact.id !==
                                 selectedContact.id
@@ -495,44 +791,25 @@ export default function BlockEditorTab({
                 setSelectedContactId(
                     null
                 );
-            } catch (exception) {
+            } catch (error) {
                 console.error(
                     "Kontaktzuordnung konnte nicht gelöscht werden:",
-                    exception
+                    error
                 );
             }
 
             return;
         }
 
-        if (
-            selectedSignalSide
-        ) {
-            try {
-                const signal =
-                    await updateBlockEditorSignal(
-                        layoutId,
-                        blockId,
-                        selectedSignalSide,
-                        BlockSignalType.NONE
-                    );
+        if (selectedSignalSide) {
+            await updateSignal(
+                selectedSignalSide,
+                BlockSignalType.NONE
+            );
 
-                updateData({
-                    signals:
-                        data.signals.map(
-                            (item) =>
-                                item.side ===
-                                signal.side
-                                    ? signal
-                                    : item
-                        ),
-                });
-            } catch (exception) {
-                console.error(
-                    "Blocksignal konnte nicht entfernt werden:",
-                    exception
-                );
-            }
+            setSelectedSignalSide(
+                null
+            );
         }
     }
 
@@ -543,22 +820,18 @@ export default function BlockEditorTab({
     ) {
         const safePosition =
             clamp(
-                Number(
-                    positionMm
-                ),
+                Number(positionMm),
                 0,
-                data.lengthMm
+                dataRef.current.lengthMm
             );
 
         const safeLength =
             clamp(
-                Number(
-                    lengthMm
-                ),
+                Number(lengthMm),
                 1,
                 Math.max(
                     1,
-                    data.lengthMm -
+                    dataRef.current.lengthMm -
                         safePosition
                 )
             );
@@ -579,7 +852,11 @@ export default function BlockEditorTab({
 
             updateData({
                 contacts:
-                    data.contacts.map(
+                    (
+                        dataRef.current
+                            .contacts ??
+                        []
+                    ).map(
                         (item) =>
                             item.id ===
                             updated.id
@@ -587,10 +864,10 @@ export default function BlockEditorTab({
                                 : item
                     ),
             });
-        } catch (exception) {
+        } catch (error) {
             console.error(
                 "Belegtmelder konnte nicht geändert werden:",
-                exception
+                error
             );
         }
     }
@@ -610,7 +887,11 @@ export default function BlockEditorTab({
 
             updateData({
                 signals:
-                    data.signals.map(
+                    (
+                        dataRef.current
+                            .signals ??
+                        []
+                    ).map(
                         (item) =>
                             item.side ===
                             side
@@ -618,148 +899,10 @@ export default function BlockEditorTab({
                                 : item
                     ),
             });
-        } catch (exception) {
+        } catch (error) {
             console.error(
                 "Blocksignal konnte nicht gespeichert werden:",
-                exception
-            );
-        }
-    }
-
-    async function createContactAtPosition(
-        positionMm
-    ) {
-        const virtual =
-            tool ===
-            "VIRTUAL_CONTACT";
-
-        if (
-            tool !==
-                "NEW_CONTACT" &&
-            !virtual
-        ) {
-            return;
-        }
-
-        if (
-            !newContactName.trim()
-        ) {
-            setError(
-                "Bitte einen Namen für den Kontakt eingeben."
-            );
-            return;
-        }
-
-        if (
-            !virtual &&
-            !newContactSystem
-        ) {
-            setError(
-                "Bitte ein Digitalsystem auswählen."
-            );
-            return;
-        }
-
-        if (
-            !virtual &&
-            (
-                !Number.isInteger(
-                    Number(
-                        newContactAddress
-                    )
-                ) ||
-                Number(
-                    newContactAddress
-                ) < 1
-            )
-        ) {
-            setError(
-                "Bitte eine gültige Adresse eingeben."
-            );
-            return;
-        }
-
-        try {
-            const detector =
-                await createContactDetector(
-                    layoutId,
-                    {
-                        name:
-                            newContactName.trim(),
-                        type:
-                            virtual
-                                ? ContactDetectorType.VIRTUAL
-                                : ContactDetectorType.PHYSICAL,
-                        digitalSystemId:
-                            virtual
-                                ? null
-                                : newContactSystem,
-                        digitalAddress:
-                            virtual
-                                ? null
-                                : Number(
-                                      newContactAddress
-                                  ),
-                    }
-                );
-
-            const assignment =
-                await assignContactDetector(
-                    layoutId,
-                    blockId,
-                    {
-                        contactDetectorId:
-                            detector.id,
-                        role:
-                            BlockContactRole.OCCUPANCY,
-                        positionMm,
-                    }
-                );
-
-            updateData({
-                contacts: [
-                    ...(data.contacts ??
-                        []),
-                    {
-                        ...assignment,
-                        lengthMm:
-                            Math.max(
-                                100,
-                                Math.round(
-                                    data.lengthMm /
-                                        4
-                                )
-                            ),
-                    },
-                ],
-            });
-
-            setDetectors(
-                (current) => [
-                    ...current,
-                    detector,
-                ]
-            );
-
-            setNewContactName(
-                ""
-            );
-            setNewContactAddress(
-                ""
-            );
-            setError(null);
-
-            setSelectedContactId(
-                assignment.id
-            );
-        } catch (exception) {
-            console.error(
-                "Kontakt konnte nicht angelegt werden:",
-                exception
-            );
-
-            setError(
-                "Der Kontakt konnte nicht angelegt werden."
+                error
             );
         }
     }
@@ -784,10 +927,12 @@ export default function BlockEditorTab({
                     coordinate /
                     AXIS_LENGTH
                 ) *
-                    data.lengthMm
+                    dataRef.current
+                        .lengthMm
             ),
             0,
-            data.lengthMm
+            dataRef.current
+                .lengthMm
         );
     }
 
@@ -795,13 +940,14 @@ export default function BlockEditorTab({
         event
     ) {
         if (
-            tool ===
-                "NEW_STOP_LEFT" ||
-            tool ===
-                "NEW_BRAKE_LEFT" ||
-            tool ===
-                "NEW_SPEED_LEFT"
+            tool === "NEW_STOP_LEFT" ||
+            tool === "NEW_BRAKE_LEFT" ||
+            tool === "NEW_SPEED_LEFT"
         ) {
+            if (!selectedContact) {
+                return;
+            }
+
             const type =
                 tool ===
                 "NEW_STOP_LEFT"
@@ -820,13 +966,14 @@ export default function BlockEditorTab({
         }
 
         if (
-            tool ===
-                "NEW_STOP_RIGHT" ||
-            tool ===
-                "NEW_BRAKE_RIGHT" ||
-            tool ===
-                "NEW_SPEED_RIGHT"
+            tool === "NEW_STOP_RIGHT" ||
+            tool === "NEW_BRAKE_RIGHT" ||
+            tool === "NEW_SPEED_RIGHT"
         ) {
+            if (!selectedContact) {
+                return;
+            }
+
             const type =
                 tool ===
                 "NEW_STOP_RIGHT"
@@ -845,15 +992,96 @@ export default function BlockEditorTab({
         }
 
         if (
-            tool === "NEW_CONTACT" ||
-            tool === "VIRTUAL_CONTACT"
+            tool ===
+                "NEW_CONTACT" ||
+            tool ===
+                "VIRTUAL_CONTACT"
         ) {
-            void createContactAtPosition(
+            const positionMm =
                 getPositionFromPointer(
                     event
-                )
+                );
+
+            open(
+                "layout-contact-detector",
+                {
+                    layoutId,
+                    blockId,
+                    positionMm,
+                    type:
+                        tool ===
+                        "VIRTUAL_CONTACT"
+                            ? ContactDetectorType.VIRTUAL
+                            : ContactDetectorType.PHYSICAL,
+                    digitalSystems,
+                    onSaved:
+                        handleContactSaved,
+                }
             );
         }
+    }
+
+    async function handleContactSaved(
+        result
+    ) {
+        const {
+            detector,
+            assignment,
+        } = result;
+
+        setDetectors(
+            (current) => {
+                const exists =
+                    current.some(
+                        (item) =>
+                            item.id ===
+                            detector.id
+                    );
+
+                return exists
+                    ? current.map(
+                          (item) =>
+                              item.id ===
+                              detector.id
+                                  ? detector
+                                  : item
+                      )
+                    : [
+                          ...current,
+                          detector,
+                      ];
+            }
+        );
+
+        const currentContacts =
+            dataRef.current
+                .contacts ?? [];
+
+        const exists =
+            currentContacts.some(
+                (item) =>
+                    item.id ===
+                    assignment.id
+            );
+
+        updateData({
+            contacts: exists
+                ? currentContacts.map(
+                      (item) =>
+                          item.id ===
+                          assignment.id
+                              ? assignment
+                              : item
+                  )
+                : [
+                      ...currentContacts,
+                      assignment,
+                  ],
+        });
+
+        setSelectedContactId(
+            assignment.id
+        );
     }
 
     function startContactDrag(
@@ -868,6 +1096,14 @@ export default function BlockEditorTab({
             contactId:
                 contact.id,
             edge,
+            positionMm:
+                getContactPosition(
+                    contact
+                ),
+            lengthMm:
+                getContactSectionLength(
+                    contact
+                ),
         };
 
         window.addEventListener(
@@ -887,9 +1123,10 @@ export default function BlockEditorTab({
     function handleContactDrag(
         event
     ) {
-        if (
-            !dragRef.current
-        ) {
+        const drag =
+            dragRef.current;
+
+        if (!drag) {
             return;
         }
 
@@ -920,84 +1157,102 @@ export default function BlockEditorTab({
                         coordinate /
                         AXIS_LENGTH
                     ) *
-                        data.lengthMm
+                        dataRef.current
+                            .lengthMm
                 ),
                 0,
-                data.lengthMm
+                dataRef.current
+                    .lengthMm
             );
 
         const contact =
-            data.contacts.find(
+            (
+                dataRef.current
+                    .contacts ??
+                []
+            ).find(
                 (item) =>
                     item.id ===
-                    dragRef.current.contactId
+                    drag.contactId
             );
 
         if (!contact) {
             return;
         }
 
+        let newPosition =
+            getContactPosition(
+                contact
+            );
+
+        let newLength =
+            getContactSectionLength(
+                contact
+            );
+
         if (
-            dragRef.current.edge ===
+            drag.edge ===
             "start"
         ) {
             const end =
-                (
-                    contact.positionMm ??
-                    0
+                getContactPosition(
+                    contact
                 ) +
-                contact.lengthMm;
+                getContactSectionLength(
+                    contact
+                );
 
-            const newStart =
+            newPosition =
                 clamp(
                     position,
                     0,
                     end - 1
                 );
 
-            updateData({
-                contacts:
-                    data.contacts.map(
-                        (item) =>
-                            item.id ===
-                            contact.id
-                                ? {
-                                      ...item,
-                                      positionMm:
-                                          newStart,
-                                      lengthMm:
-                                          end -
-                                          newStart,
-                                  }
-                                : item
-                    ),
-            });
+            newLength =
+                end -
+                newPosition;
+        } else {
+            const start =
+                getContactPosition(
+                    contact
+                );
 
-            return;
+            const newEnd =
+                clamp(
+                    position,
+                    start + 1,
+                    dataRef.current
+                        .lengthMm
+                );
+
+            newLength =
+                newEnd -
+                start;
         }
 
-        const start =
-            contact.positionMm ??
-            0;
+        drag.positionMm =
+            newPosition;
 
-        const newEnd =
-            clamp(
-                position,
-                start + 1,
-                data.lengthMm
-            );
+        drag.lengthMm =
+            newLength;
 
         updateData({
             contacts:
-                data.contacts.map(
+                (
+                    dataRef.current
+                        .contacts ??
+                    []
+                ).map(
                     (item) =>
                         item.id ===
                         contact.id
                             ? {
                                   ...item,
+                                  positionMm:
+                                      newPosition,
                                   lengthMm:
-                                      newEnd -
-                                      start,
+                                      newLength,
                               }
                             : item
                 ),
@@ -1010,19 +1265,29 @@ export default function BlockEditorTab({
             handleContactDrag
         );
 
+        const drag =
+            dragRef.current;
+
+        if (!drag) {
+            return;
+        }
+
         const contact =
-            data.contacts.find(
+            (
+                dataRef.current
+                    .contacts ??
+                []
+            ).find(
                 (item) =>
                     item.id ===
-                    dragRef.current?.contactId
+                    drag.contactId
             );
 
         if (contact) {
             void updateContact(
                 contact,
-                contact.positionMm ??
-                    0,
-                contact.lengthMm
+                drag.positionMm,
+                drag.lengthMm
             );
         }
 
@@ -1030,14 +1295,304 @@ export default function BlockEditorTab({
             null;
     }
 
-    function focusProperties() {
-        propertiesRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-        });
+    function openContactDialog(
+        contact
+    ) {
+        const detector =
+            detectors.find(
+                (item) =>
+                    item.id ===
+                    contact.contactDetectorId
+            );
+
+        if (!detector) {
+            return;
+        }
+
+        open(
+            "layout-contact-detector",
+            {
+                layoutId,
+                blockId,
+                assignment:
+                    contact,
+                detector,
+                digitalSystems,
+                onSaved:
+                    handleContactSaved,
+            }
+        );
     }
 
-    const selectedContactDetector =
+    function getMarkerPosition(
+        marker,
+        contact
+    ) {
+        if (!contact) {
+            return 0;
+        }
+
+        const contactLength =
+            getContactSectionLength(
+                contact
+            );
+
+        if (
+            contactLength <= 0
+        ) {
+            return 0;
+        }
+
+        return clamp(
+            (
+                Number(
+                    marker.positionMm
+                ) || 0
+            ) /
+                contactLength,
+            0,
+            1
+        );
+    }
+
+    function renderContact(
+        contact
+    ) {
+        const selected =
+            selectedContactId ===
+            contact.id;
+
+        const start =
+            getContactPosition(
+                contact
+            );
+
+        const length =
+            getContactSectionLength(
+                contact
+            );
+
+        const left =
+            clamp(
+                start /
+                    data.lengthMm,
+                0,
+                1
+            ) *
+            100;
+
+        const width =
+            clamp(
+                length /
+                    data.lengthMm,
+                0,
+                1
+            ) *
+            100;
+
+        return (
+            <div
+                key={contact.id}
+                className={[
+                    "block-editor-contact-section",
+                    selected
+                        ? "selected"
+                        : "",
+                ]
+                    .filter(Boolean)
+                    .join(" ")}
+                style={
+                    orientation ===
+                    BlockGridOrientation.HORIZONTAL
+                        ? {
+                              left: `${left}%`,
+                              width: `${Math.max(
+                                  width,
+                                  1
+                              )}%`,
+                          }
+                        : {
+                              top: `${left}%`,
+                              height: `${Math.max(
+                                  width,
+                                  1
+                              )}%`,
+                          }
+                }
+                onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedContactId(
+                        contact.id
+                    );
+                    setSelectedMarkerId(
+                        null
+                    );
+                    setSelectedSignalSide(
+                        null
+                    );
+                    setTool(
+                        "NONE"
+                    );
+                }}
+                onDoubleClick={(
+                    event
+                ) => {
+                    event.stopPropagation();
+                    openContactDialog(
+                        contact
+                    );
+                }}
+            >
+                <span className="block-editor-contact-label">
+                    {contact.contactDetectorName}
+                </span>
+
+                <button
+                    type="button"
+                    className="block-editor-contact-handle start"
+                    onPointerDown={(
+                        event
+                    ) =>
+                        startContactDrag(
+                            event,
+                            contact,
+                            "start"
+                        )
+                    }
+                    title="Belegtmelder-Anfang verschieben"
+                />
+
+                <button
+                    type="button"
+                    className="block-editor-contact-handle end"
+                    onPointerDown={(
+                        event
+                    ) =>
+                        startContactDrag(
+                            event,
+                            contact,
+                            "end"
+                        )
+                    }
+                    title="Belegtmelder-Ende verschieben"
+                />
+            </div>
+        );
+    }
+
+    function renderMarkers(
+        direction
+    ) {
+        const markers =
+            (
+                data.markers ??
+                []
+            ).filter(
+                (marker) =>
+                    marker.direction ===
+                        direction ||
+                    marker.direction ===
+                        BlockDirection.BOTH
+            );
+
+        return markers.map(
+            (marker) => {
+                const contact =
+                    occupancyContacts.find(
+                        (item) =>
+                            item.id ===
+                            marker.contactAssignmentId
+                    );
+
+                if (!contact) {
+                    return null;
+                }
+
+                return (
+                    <MarkerFlag
+                        key={marker.id}
+                        marker={marker}
+                        contact={
+                            contact
+                        }
+                        blockLength={
+                            data.lengthMm
+                        }
+                        orientation={
+                            orientation
+                        }
+                        selected={
+                            selectedMarkerId ===
+                            marker.id
+                        }
+                        onClick={() => {
+                            setSelectedMarkerId(
+                                marker.id
+                            );
+                            setSelectedContactId(
+                                contact.id
+                            );
+                            setSelectedSignalSide(
+                                null
+                            );
+                            setTool(
+                                "PROPERTIES"
+                            );
+                        }}
+                    />
+                );
+            }
+        );
+    }
+
+    function renderSignal(
+        side
+    ) {
+        const signal =
+            (
+                data.signals ??
+                []
+            ).find(
+                (item) =>
+                    item.side ===
+                    side
+            );
+
+        return (
+            <BlockSignal
+                side={side}
+                signal={
+                    signal
+                }
+                orientation={
+                    orientation
+                }
+                selected={
+                    selectedSignalSide ===
+                    side
+                }
+                onClick={() => {
+                    setSelectedSignalSide(
+                        side
+                    );
+                    setSelectedMarkerId(
+                        null
+                    );
+                    setSelectedContactId(
+                        null
+                    );
+                    setTool(
+                        "PROPERTIES"
+                    );
+                }}
+            />
+        );
+    }
+
+    const markerToolsDisabled =
+        !selectedContact;
+
+    const selectedDetector =
         selectedContact
             ? detectors.find(
                   (detector) =>
@@ -1057,7 +1612,8 @@ export default function BlockEditorTab({
                         }
                         onChange={(event) =>
                             void changeOrientation(
-                                event.target
+                                event
+                                    .target
                                     .value
                             )
                         }
@@ -1087,220 +1643,135 @@ export default function BlockEditorTab({
                     </div>
 
                     <div
-                        className={
-                            `block-editor-preview-area ${
-                                orientation ===
-                                BlockGridOrientation.VERTICAL
-                                    ? "vertical"
-                                    : "horizontal"
-                            }`
-                        }
+                        className={[
+                            "block-editor-preview-area",
+                            orientation ===
+                            BlockGridOrientation.VERTICAL
+                                ? "vertical"
+                                : "horizontal",
+                        ].join(" ")}
                     >
-                        <div
-                            className="block-editor-preview-track"
-                            onClick={
-                                handleCanvasClick
-                            }
-                        >
-                            {orientation ===
-                            BlockGridOrientation.HORIZONTAL ? (
-                                <>
-                                    <div className="block-editor-marker-row top">
-                                        {data.markers
-                                            ?.filter(
-                                                (
-                                                    marker
-                                                ) =>
-                                                    marker.direction ===
-                                                        BlockDirection.FORWARD ||
-                                                    marker.direction ===
-                                                        BlockDirection.BOTH
-                                            )
-                                            .map(
-                                                (
-                                                    marker
-                                                ) => (
-                                                    <MarkerFlag
-                                                        key={
-                                                            marker.id
-                                                        }
-                                                        marker={
-                                                            marker
-                                                        }
-                                                        length={
-                                                            data.lengthMm
-                                                        }
-                                                        selected={
-                                                            selectedMarkerId ===
-                                                            marker.id
-                                                        }
-                                                        onClick={() => {
-                                                            setSelectedMarkerId(
-                                                                marker.id
-                                                            );
-                                                            setSelectedContactId(
-                                                                null
-                                                            );
-                                                            setSelectedSignalSide(
-                                                                null
-                                                            );
-                                                        }}
-                                                    />
-                                                )
-                                            )}
-                                    </div>
+                        <div className="block-editor-marker-row top">
+                            {renderMarkers(
+                                BlockDirection.FORWARD
+                            )}
+                        </div>
 
-                                    <BlockTrack
-                                        data={
-                                            data
-                                        }
-                                        selectedContactId={
-                                            selectedContactId
-                                        }
-                                        selectedSignalSide={
-                                            selectedSignalSide
-                                        }
-                                        onContactClick={(
-                                            contact
-                                        ) => {
-                                            setSelectedContactId(
-                                                contact.id
-                                            );
-                                            setSelectedMarkerId(
-                                                null
-                                            );
-                                            setSelectedSignalSide(
-                                                null
-                                            );
-                                        }}
-                                        onSignalClick={(
-                                            side
-                                        ) => {
-                                            setSelectedSignalSide(
-                                                side
-                                            );
-                                            setSelectedMarkerId(
-                                                null
-                                            );
-                                            setSelectedContactId(
-                                                null
-                                            );
-                                        }}
-                                        onContactHandleDown={
-                                            startContactDrag
-                                        }
-                                    />
+                        <div className="block-editor-preview-track">
+                            <div className="block-editor-signal-row">
+                                {renderSignal(
+                                    BlockSignalSide.START
+                                )}
 
-                                    <div className="block-editor-marker-row bottom">
-                                        {data.markers
-                                            ?.filter(
-                                                (
-                                                    marker
-                                                ) =>
-                                                    marker.direction ===
-                                                        BlockDirection.REVERSE ||
-                                                    marker.direction ===
-                                                        BlockDirection.BOTH
-                                            )
-                                            .map(
-                                                (
-                                                    marker
-                                                ) => (
-                                                    <MarkerFlag
-                                                        key={
-                                                            marker.id
-                                                        }
-                                                        marker={
-                                                            marker
-                                                        }
-                                                        length={
-                                                            data.lengthMm
-                                                        }
-                                                        selected={
-                                                            selectedMarkerId ===
-                                                            marker.id
-                                                        }
-                                                        onClick={() => {
-                                                            setSelectedMarkerId(
-                                                                marker.id
-                                                            );
-                                                            setSelectedContactId(
-                                                                null
-                                                            );
-                                                            setSelectedSignalSide(
-                                                                null
-                                                            );
-                                                        }}
-                                                    />
-                                                )
-                                            )}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="block-editor-vertical-wrapper">
-                                    <BlockTrack
-                                        data={
-                                            data
-                                        }
-                                        selectedContactId={
-                                            selectedContactId
-                                        }
-                                        selectedSignalSide={
-                                            selectedSignalSide
-                                        }
-                                        onContactClick={(
-                                            contact
-                                        ) => {
-                                            setSelectedContactId(
-                                                contact.id
-                                            );
-                                            setSelectedMarkerId(
-                                                null
-                                            );
-                                            setSelectedSignalSide(
-                                                null
-                                            );
-                                        }}
-                                        onSignalClick={(
-                                            side
-                                        ) => {
-                                            setSelectedSignalSide(
-                                                side
-                                            );
-                                            setSelectedMarkerId(
-                                                null
-                                            );
-                                            setSelectedContactId(
-                                                null
-                                            );
-                                        }}
-                                        onContactHandleDown={
-                                            startContactDrag
-                                        }
-                                    />
+                                <div className="block-editor-track">
+                                    {occupancyContacts.map(
+                                        renderContact
+                                    )}
                                 </div>
+
+                                {renderSignal(
+                                    BlockSignalSide.END
+                                )}
+                            </div>
+
+                            <div className="block-editor-track-markers">
+                                {(
+                                    data.markers ??
+                                    []
+                                ).map(
+                                    (
+                                        marker
+                                    ) => {
+                                        const contact =
+                                            occupancyContacts.find(
+                                                (
+                                                    item
+                                                ) =>
+                                                    item.id ===
+                                                    marker.contactAssignmentId
+                                            );
+
+                                        if (
+                                            !contact
+                                        ) {
+                                            return null;
+                                        }
+
+                                        const position =
+                                            getMarkerPosition(
+                                                marker,
+                                                contact
+                                            );
+
+                                        return (
+                                            <span
+                                                key={
+                                                    marker.id
+                                                }
+                                                className={[
+                                                    "block-editor-marker-position",
+                                                    selectedMarkerId ===
+                                                    marker.id
+                                                        ? "selected"
+                                                        : "",
+                                                ]
+                                                    .filter(
+                                                        Boolean
+                                                    )
+                                                    .join(
+                                                        " "
+                                                    )}
+                                                style={{
+                                                    [orientation ===
+                                                    BlockGridOrientation.HORIZONTAL
+                                                        ? "left"
+                                                        : "top"]:
+                                                        `${(
+                                                            (
+                                                                getContactPosition(
+                                                                    contact
+                                                                ) /
+                                                                    data.lengthMm
+                                                            ) +
+                                                            position *
+                                                                (
+                                                                    getContactSectionLength(
+                                                                        contact
+                                                                    ) /
+                                                                        data.lengthMm
+                                                                )
+                                                        ) *
+                                                            100}%`,
+                                                }}
+                                            />
+                                        );
+                                    }
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="block-editor-marker-row bottom">
+                            {renderMarkers(
+                                BlockDirection.REVERSE
                             )}
                         </div>
                     </div>
-
-                    <div className="block-editor-preview-help">
-                        Markierungen und Blocksignale anklicken.
-                        Belegtmelder können an den roten Griffen
-                        verlängert bzw. verkürzt werden.
-                    </div>
                 </div>
 
-                <div
-                    className="block-editor-tools"
-                    ref={propertiesRef}
-                >
+                <div className="block-editor-tools">
                     <section className="block-editor-section">
                         <h4>Tools</h4>
 
                         <div className="block-editor-tool-row">
                             <select
                                 value={
-                                    tool
+                                    tool.startsWith(
+                                        "NEW_CONTACT"
+                                    ) ||
+                                    tool ===
+                                        "VIRTUAL_CONTACT"
+                                        ? tool
+                                        : "NONE"
                                 }
                                 onChange={(
                                     event
@@ -1313,7 +1784,7 @@ export default function BlockEditorTab({
                                 }
                             >
                                 <option value="NONE">
-                                    Neuer Kontakt
+                                    Werkzeug wählen
                                 </option>
                                 <option value="NEW_CONTACT">
                                     Neuer Kontakt
@@ -1325,13 +1796,21 @@ export default function BlockEditorTab({
 
                             <button
                                 type="button"
-                                onClick={
-                                    focusProperties
+                                className={
+                                    tool ===
+                                    "PROPERTIES"
+                                        ? "active"
+                                        : ""
                                 }
                                 disabled={
                                     !selectedMarker &&
                                     !selectedContact &&
-                                    !selectedSignal
+                                    !selectedSignalSide
+                                }
+                                onClick={() =>
+                                    setTool(
+                                        "PROPERTIES"
+                                    )
                                 }
                             >
                                 Eigenschaften
@@ -1339,820 +1818,378 @@ export default function BlockEditorTab({
 
                             <button
                                 type="button"
-                                className="block-editor-delete-button"
-                                onClick={() =>
-                                    void removeSelected()
-                                }
+                                className="danger"
                                 disabled={
                                     !selectedMarker &&
                                     !selectedContact &&
-                                    !selectedSignal
+                                    !selectedSignalSide
+                                }
+                                onClick={() =>
+                                    void removeSelected()
                                 }
                             >
                                 X
                             </button>
                         </div>
 
-                        {(
-                            tool ===
-                                "NEW_CONTACT" ||
-                            tool ===
-                                "VIRTUAL_CONTACT"
-                        ) && (
-                            <div className="block-editor-contact-create">
-                                <input
-                                    type="text"
-                                    placeholder="Kontaktname"
-                                    value={
-                                        newContactName
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setNewContactName(
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                />
+                        <div className="block-editor-tool-arrow-row">
+                            <button
+                                type="button"
+                                disabled={
+                                    markerToolsDisabled
+                                }
+                                className="marker-stop"
+                                onClick={() =>
+                                    void createMarker(
+                                        BlockMarkerType.STOP,
+                                        BlockDirection.FORWARD
+                                    )
+                                }
+                            >
+                                ← Haltemarkierung
+                            </button>
 
-                                {tool ===
-                                    "NEW_CONTACT" && (
-                                    <>
-                                        <select
-                                            value={
-                                                newContactSystem
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
-                                                setNewContactSystem(
-                                                    event
-                                                        .target
-                                                        .value
-                                                )
-                                            }
-                                        >
-                                            <option value="">
-                                                Digitalsystem
-                                            </option>
+                            <button
+                                type="button"
+                                disabled={
+                                    markerToolsDisabled
+                                }
+                                className="marker-brake"
+                                onClick={() =>
+                                    void createMarker(
+                                        BlockMarkerType.BRAKE,
+                                        BlockDirection.FORWARD
+                                    )
+                                }
+                            >
+                                ← Bremsmarkierung
+                            </button>
 
-                                            {digitalSystems.map(
-                                                (
-                                                    system
-                                                ) => (
-                                                    <option
-                                                        key={
-                                                            system.id
-                                                        }
-                                                        value={
-                                                            system.id
-                                                        }
-                                                    >
-                                                        {
-                                                            system.name
-                                                        }
-                                                    </option>
-                                                )
-                                            )}
-                                        </select>
+                            <button
+                                type="button"
+                                disabled={
+                                    markerToolsDisabled
+                                }
+                                className="marker-speed"
+                                onClick={() =>
+                                    void createMarker(
+                                        BlockMarkerType.SPEED,
+                                        BlockDirection.FORWARD
+                                    )
+                                }
+                            >
+                                ← Geschwindigkeitsmarkierung
+                            </button>
+                        </div>
 
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            placeholder="Adresse"
-                                            value={
-                                                newContactAddress
-                                            }
-                                            onChange={(
-                                                event
-                                            ) =>
-                                                setNewContactAddress(
-                                                    event
-                                                        .target
-                                                        .value
-                                                )
-                                            }
-                                        />
-                                    </>
-                                )}
+                        <div className="block-editor-tool-arrow-row">
+                            <button
+                                type="button"
+                                disabled={
+                                    markerToolsDisabled
+                                }
+                                className="marker-stop"
+                                onClick={() =>
+                                    void createMarker(
+                                        BlockMarkerType.STOP,
+                                        BlockDirection.REVERSE
+                                    )
+                                }
+                            >
+                                → Haltemarkierung
+                            </button>
 
-                                <div className="block-editor-contact-hint">
-                                    Anschließend auf die
-                                    gewünschte Position im
-                                    Block klicken.
-                                </div>
+                            <button
+                                type="button"
+                                disabled={
+                                    markerToolsDisabled
+                                }
+                                className="marker-brake"
+                                onClick={() =>
+                                    void createMarker(
+                                        BlockMarkerType.BRAKE,
+                                        BlockDirection.REVERSE
+                                    )
+                                }
+                            >
+                                → Bremsmarkierung
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={
+                                    markerToolsDisabled
+                                }
+                                className="marker-speed"
+                                onClick={() =>
+                                    void createMarker(
+                                        BlockMarkerType.SPEED,
+                                        BlockDirection.REVERSE
+                                    )
+                                }
+                            >
+                                → Geschwindigkeitsmarkierung
+                            </button>
+                        </div>
+
+                        {!selectedContact && (
+                            <div className="block-editor-hint">
+                                Wähle zuerst einen roten Belegtmeldeabschnitt aus.
+                                Erst dann können Markierungen angelegt werden.
                             </div>
                         )}
-
-                        <div className="block-editor-tool-row marker-tools">
-                            <button
-                                type="button"
-                                className="marker-stop"
-                                onClick={() =>
-                                    setTool(
-                                        "NEW_STOP_LEFT"
-                                    )
-                                }
-                            >
-                                ← Halt
-                            </button>
-
-                            <button
-                                type="button"
-                                className="marker-brake"
-                                onClick={() =>
-                                    setTool(
-                                        "NEW_BRAKE_LEFT"
-                                    )
-                                }
-                            >
-                                ← Bremse
-                            </button>
-
-                            <button
-                                type="button"
-                                className="marker-speed"
-                                onClick={() =>
-                                    setTool(
-                                        "NEW_SPEED_LEFT"
-                                    )
-                                }
-                            >
-                                ← Tempo
-                            </button>
-                        </div>
-
-                        <div className="block-editor-tool-row marker-tools">
-                            <button
-                                type="button"
-                                className="marker-stop"
-                                onClick={() =>
-                                    setTool(
-                                        "NEW_STOP_RIGHT"
-                                    )
-                                }
-                            >
-                                Halt →
-                            </button>
-
-                            <button
-                                type="button"
-                                className="marker-brake"
-                                onClick={() =>
-                                    setTool(
-                                        "NEW_BRAKE_RIGHT"
-                                    )
-                                }
-                            >
-                                Bremse →
-                            </button>
-
-                            <button
-                                type="button"
-                                className="marker-speed"
-                                onClick={() =>
-                                    setTool(
-                                        "NEW_SPEED_RIGHT"
-                                    )
-                                }
-                            >
-                                Tempo →
-                            </button>
-                        </div>
                     </section>
 
                     <section
-                        className={
-                            `block-editor-section ${
-                                selectedMarker
-                                    ? ""
-                                    : "disabled"
-                            }`
-                        }
+                        className={[
+                            "block-editor-section",
+                            !selectedMarker
+                                ? "disabled"
+                                : "",
+                        ].join(" ")}
                     >
                         <h4>
                             Markierungen
                         </h4>
 
-                        <label>
-                            Distanz
-                            <div className="block-editor-unit-input">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={
-                                        selectedMarker
-                                            ?.positionMm ??
-                                        ""
-                                    }
-                                    disabled={
-                                        !selectedMarker
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        selectedMarker &&
-                                        void updateMarker(
-                                            selectedMarker,
-                                            {
-                                                positionMm:
-                                                    Number(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    ),
-                                            }
-                                        )
-                                    }
-                                />
-                                <span>
-                                    mm
-                                </span>
+                        {!selectedMarker && (
+                            <div className="block-editor-disabled-hint">
+                                Keine Markierung ausgewählt.
                             </div>
-                        </label>
-
-                        <label>
-                            Rampe
-                            <div className="block-editor-unit-input">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={
-                                        selectedMarker
-                                            ?.lengthMm ??
-                                        ""
-                                    }
-                                    disabled={
-                                        !selectedMarker
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        selectedMarker &&
-                                        void updateMarker(
-                                            selectedMarker,
-                                            {
-                                                lengthMm:
-                                                    Number(
-                                                        event
-                                                            .target
-                                                            .value
-                                                    ),
-                                            }
-                                        )
-                                    }
-                                />
-                                <span>
-                                    mm
-                                </span>
-                            </div>
-                        </label>
-
-                        <label>
-                            Zugposition
-                            <select
-                                disabled={
-                                    !selectedMarker
-                                }
-                                value={
-                                    selectedMarker
-                                        ?.trainPosition ??
-                                    BlockMarkerTrainPosition.FRONT
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    selectedMarker &&
-                                    void updateMarker(
-                                        selectedMarker,
-                                        {
-                                            trainPosition:
-                                                event
-                                                    .target
-                                                    .value,
-                                        }
-                                    )
-                                }
-                            >
-                                <option value="FRONT">
-                                    Zugspitze
-                                </option>
-                                <option value="MIDDLE">
-                                    Zugmitte
-                                </option>
-                                <option value="END">
-                                    Zugende
-                                </option>
-                                <option value="FORMULA">
-                                    Formel
-                                </option>
-                            </select>
-                        </label>
-
-                        <label className="block-editor-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={
-                                    selectedMarker
-                                        ?.scheduledStop ??
-                                    false
-                                }
-                                disabled={
-                                    !selectedMarker
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    selectedMarker &&
-                                    void updateMarker(
-                                        selectedMarker,
-                                        {
-                                            scheduledStop:
-                                                event
-                                                    .target
-                                                    .checked,
-                                        }
-                                    )
-                                }
-                            />
-                            Nur planmäßiger Halt
-                        </label>
+                        )}
 
                         {selectedMarker && (
-                            <div className="block-editor-selection-info">
-                                {markerLabel(
-                                    selectedMarker.type
-                                )}
-                            </div>
+                            <>
+                                <label>
+                                    Distanz
+                                    <div className="block-editor-unit-input">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={
+                                                selectedMarker.positionMm ??
+                                                0
+                                            }
+                                            onChange={(
+                                                event
+                                            ) =>
+                                                void updateMarker(
+                                                    selectedMarker,
+                                                    {
+                                                        positionMm:
+                                                            event
+                                                                .target
+                                                                .value,
+                                                    }
+                                                )
+                                            }
+                                        />
+                                        <span>
+                                            mm
+                                        </span>
+                                    </div>
+                                </label>
+
+                                <label>
+                                    Rampe
+                                    <div className="block-editor-unit-input">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            disabled={
+                                                selectedMarker.type ===
+                                                BlockMarkerType.STOP
+                                            }
+                                            value={
+                                                selectedMarker.type ===
+                                                BlockMarkerType.STOP
+                                                    ? ""
+                                                    : selectedMarker.lengthMm ??
+                                                      0
+                                            }
+                                            onChange={(
+                                                event
+                                            ) =>
+                                                void updateMarker(
+                                                    selectedMarker,
+                                                    {
+                                                        lengthMm:
+                                                            event
+                                                                .target
+                                                                .value,
+                                                    }
+                                                )
+                                            }
+                                        />
+                                        <span>
+                                            mm
+                                        </span>
+                                    </div>
+                                </label>
+
+                                <label>
+                                    Zugposition
+                                    <select
+                                        value={
+                                            selectedMarker.trainPosition ??
+                                            BlockMarkerTrainPosition.FRONT
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            void updateMarker(
+                                                selectedMarker,
+                                                {
+                                                    trainPosition:
+                                                        event
+                                                            .target
+                                                            .value,
+                                                }
+                                            )
+                                        }
+                                    >
+                                        <option
+                                            value={
+                                                BlockMarkerTrainPosition.FRONT
+                                            }
+                                        >
+                                            Zugspitze
+                                        </option>
+                                        <option
+                                            value={
+                                                BlockMarkerTrainPosition.MIDDLE
+                                            }
+                                        >
+                                            Zugmitte
+                                        </option>
+                                        <option
+                                            value={
+                                                BlockMarkerTrainPosition.END
+                                            }
+                                        >
+                                            Zugende
+                                        </option>
+                                        <option
+                                            value={
+                                                BlockMarkerTrainPosition.FORMULA
+                                            }
+                                        >
+                                            Formel
+                                        </option>
+                                    </select>
+                                </label>
+
+                                <label className="block-editor-checkbox">
+                                    <input
+                                        type="checkbox"
+                                        checked={
+                                            selectedMarker.scheduledStop ??
+                                            false
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            void updateMarker(
+                                                selectedMarker,
+                                                {
+                                                    scheduledStop:
+                                                        event
+                                                            .target
+                                                            .checked,
+                                                }
+                                            )
+                                        }
+                                    />
+                                    Nur planmäßiger Halt
+                                </label>
+
+                                <div className="block-editor-selected-info">
+                                    {markerLabel(
+                                        selectedMarker.type
+                                    )}
+                                    {" · "}
+                                    {getMarkerDirectionLabel(
+                                        selectedMarker.direction
+                                    )}
+                                    {" · "}
+                                    {selectedDetector?.name ??
+                                        "Belegtmelder"}
+                                </div>
+                            </>
                         )}
                     </section>
 
                     <section
-                        className={
-                            `block-editor-section ${
-                                selectedSignal
-                                    ? ""
-                                    : "disabled"
-                            }`
-                        }
+                        className={[
+                            "block-editor-section",
+                            !selectedSignalSide
+                                ? "disabled"
+                                : "",
+                        ].join(" ")}
                     >
                         <h4>
                             Blocksignal
                         </h4>
 
-                        <label>
-                            Signaltyp
-                            <select
-                                disabled={
-                                    !selectedSignal
-                                }
-                                value={
-                                    selectedSignal
-                                        ?.signalType ??
-                                    BlockSignalType.NONE
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    selectedSignalSide &&
-                                    void updateSignal(
-                                        selectedSignalSide,
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                            >
-                                <option value="NONE">
-                                    Keins
-                                </option>
-                                <option value="TWO_ASPECT">
-                                    Zweibegriffig
-                                </option>
-                                <option value="THREE_ASPECT">
-                                    Dreibegriffig
-                                </option>
-                                <option value="FOUR_ASPECT">
-                                    Vierbegriffig
-                                </option>
-                            </select>
-                        </label>
-
-                        {selectedSignal && (
-                            <div className="block-editor-selection-info">
-                                Ende:{" "}
-                                {selectedSignal.side ===
-                                BlockSignalSide.START
-                                    ? "Start"
-                                    : "Ende"}
+                        {!selectedSignalSide && (
+                            <div className="block-editor-disabled-hint">
+                                Wähle ein Blocksignal am Anfang oder Ende des Blocks.
                             </div>
                         )}
-                    </section>
 
-                    <section
-                        className={
-                            `block-editor-section ${
-                                selectedContact
-                                    ? ""
-                                    : "disabled"
-                            }`
-                        }
-                    >
-                        <h4>
-                            Belegtmelder
-                        </h4>
-
-                        <label>
-                            Position
-                            <div className="block-editor-unit-input">
-                                <input
-                                    type="number"
-                                    min="0"
+                        {selectedSignalSide && (
+                            <label>
+                                Signaltyp
+                                <select
                                     value={
-                                        selectedContact
-                                            ?.positionMm ??
-                                        ""
-                                    }
-                                    disabled={
-                                        !selectedContact
+                                        selectedSignal?.signalType ??
+                                        BlockSignalType.NONE
                                     }
                                     onChange={(
                                         event
                                     ) =>
-                                        selectedContact &&
-                                        void updateContact(
-                                            selectedContact,
-                                            Number(
-                                                event
-                                                    .target
-                                                    .value
-                                            ),
-                                            selectedContact.lengthMm
+                                        void updateSignal(
+                                            selectedSignalSide,
+                                            event
+                                                .target
+                                                .value
                                         )
                                     }
-                                />
-                                <span>
-                                    mm
-                                </span>
-                            </div>
-                        </label>
-
-                        <label>
-                            Länge
-                            <div className="block-editor-unit-input">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={
-                                        selectedContact
-                                            ?.lengthMm ??
-                                        ""
-                                    }
-                                    disabled={
-                                        !selectedContact
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        selectedContact &&
-                                        void updateContact(
-                                            selectedContact,
-                                            selectedContact.positionMm ??
-                                                0,
-                                            Number(
-                                                event
-                                                    .target
-                                                    .value
-                                            )
-                                        )
-                                    }
-                                />
-                                <span>
-                                    mm
-                                </span>
-                            </div>
-                        </label>
-
-                        {selectedContact && (
-                            <div className="block-editor-selection-info">
-                                {selectedContactDetector?.name ??
-                                    selectedContact.contactDetectorName}
-                            </div>
+                                >
+                                    <option
+                                        value={
+                                            BlockSignalType.NONE
+                                        }
+                                    >
+                                        Keins
+                                    </option>
+                                    <option
+                                        value={
+                                            BlockSignalType.TWO_ASPECT
+                                        }
+                                    >
+                                        Zweibegriffig
+                                    </option>
+                                    <option
+                                        value={
+                                            BlockSignalType.THREE_ASPECT
+                                        }
+                                    >
+                                        Dreibegriffig
+                                    </option>
+                                    <option
+                                        value={
+                                            BlockSignalType.FOUR_ASPECT
+                                        }
+                                    >
+                                        Vierbegriffig
+                                    </option>
+                                </select>
+                            </label>
                         )}
                     </section>
-
-                    {error && (
-                        <div className="block-editor-error">
-                            {error}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
     );
-}
-
-function MarkerFlag({
-    marker,
-    length,
-    selected,
-    onClick,
-}) {
-    const left =
-        `${(
-            marker.positionMm /
-            Math.max(
-                1,
-                length
-            )
-        ) * 100}%`;
-
-    return (
-        <button
-            type="button"
-            className={
-                `block-editor-marker-flag ${
-                    selected
-                        ? "selected"
-                        : ""
-                }`
-            }
-            style={{
-                left,
-                "--marker-color":
-                    markerColors[
-                        marker.type
-                    ] ??
-                    "#777777",
-            }}
-            onClick={(
-                event
-            ) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <span className="marker-flag-pole" />
-            <span className="marker-flag-label">
-                {marker.lengthMm}
-                {" mm / "}
-                {marker.type ===
-                BlockMarkerType.STOP
-                    ? "H"
-                    : marker.type ===
-                        BlockMarkerType.BRAKE
-                      ? "B"
-                      : "G"}
-            </span>
-        </button>
-    );
-}
-
-function BlockTrack({
-    data,
-    selectedContactId,
-    selectedSignalSide,
-    onContactClick,
-    onSignalClick,
-    onContactHandleDown,
-}) {
-    return (
-        <div className="block-editor-track">
-            <button
-                type="button"
-                className={
-                    `block-editor-signal ${
-                        selectedSignalSide ===
-                        BlockSignalSide.START
-                            ? "selected"
-                            : ""
-                    }`
-                }
-                onClick={(
-                    event
-                ) => {
-                    event.stopPropagation();
-                    onSignalClick(
-                        BlockSignalSide.START
-                    );
-                }}
-            >
-                <span className="signal-head">
-                    {signalShortName(
-                        data.signals?.find(
-                            (signal) =>
-                                signal.side ===
-                                BlockSignalSide.START
-                        )?.signalType
-                    )}
-                </span>
-            </button>
-
-            <div className="block-editor-track-body">
-                {(
-                    data.contacts ??
-                    []
-                )
-                    .filter(
-                        (contact) =>
-                            contact.role ===
-                            BlockContactRole.OCCUPANCY
-                    )
-                    .map(
-                        (
-                            contact
-                        ) => (
-                            <ContactSection
-                                key={
-                                    contact.id
-                                }
-                                contact={
-                                    contact
-                                }
-                                length={
-                                    data.lengthMm
-                                }
-                                selected={
-                                    selectedContactId ===
-                                    contact.id
-                                }
-                                onClick={() =>
-                                    onContactClick(
-                                        contact
-                                    )
-                                }
-                                onHandleDown={
-                                    onContactHandleDown
-                                }
-                            />
-                        )
-                    )}
-
-                <div className="block-editor-track-rail" />
-
-                {(
-                    data.markers ??
-                    []
-                ).map(
-                    (marker) => (
-                        <div
-                            key={
-                                marker.id
-                            }
-                            className="block-editor-hidden-marker-anchor"
-                            style={{
-                                left:
-                                    `${
-                                        (
-                                            marker.positionMm /
-                                            Math.max(
-                                                1,
-                                                data.lengthMm
-                                            )
-                                        ) *
-                                        100
-                                    }%`,
-                            }}
-                        />
-                    )
-                )}
-            </div>
-
-            <button
-                type="button"
-                className={
-                    `block-editor-signal ${
-                        selectedSignalSide ===
-                        BlockSignalSide.END
-                            ? "selected"
-                            : ""
-                    }`
-                }
-                onClick={(
-                    event
-                ) => {
-                    event.stopPropagation();
-                    onSignalClick(
-                        BlockSignalSide.END
-                    );
-                }}
-            >
-                <span className="signal-head">
-                    {signalShortName(
-                        data.signals?.find(
-                            (signal) =>
-                                signal.side ===
-                                BlockSignalSide.END
-                        )?.signalType
-                    )}
-                </span>
-            </button>
-        </div>
-    );
-}
-
-function ContactSection({
-    contact,
-    length,
-    selected,
-    onClick,
-    onHandleDown,
-}) {
-    const start =
-        (
-            (
-                contact.positionMm ??
-                0
-            ) /
-            Math.max(
-                1,
-                length
-            )
-        ) *
-        100;
-
-    const width =
-        (
-            contact.lengthMm /
-            Math.max(
-                1,
-                length
-            )
-        ) *
-        100;
-
-    return (
-        <button
-            type="button"
-            className={
-                `block-editor-contact-section ${
-                    selected
-                        ? "selected"
-                        : ""
-                }`
-            }
-            style={{
-                left:
-                    `${start}%`,
-                width:
-                    `${width}%`,
-            }}
-            onClick={(
-                event
-            ) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <span
-                className="contact-handle"
-                onPointerDown={(
-                    event
-                ) =>
-                    onHandleDown(
-                        event,
-                        contact,
-                        "start"
-                    )
-                }
-            />
-
-            <span className="contact-name">
-                {contact.contactDetectorName}
-            </span>
-
-            <span
-                className="contact-handle"
-                onPointerDown={(
-                    event
-                ) =>
-                    onHandleDown(
-                        event,
-                        contact,
-                        "end"
-                    )
-                }
-            />
-        </button>
-    );
-}
-
-function signalShortName(
-    type
-) {
-    switch (type) {
-        case BlockSignalType.TWO_ASPECT:
-            return "2";
-
-        case BlockSignalType.THREE_ASPECT:
-            return "3";
-
-        case BlockSignalType.FOUR_ASPECT:
-            return "4";
-
-        default:
-            return "–";
-    }
 }

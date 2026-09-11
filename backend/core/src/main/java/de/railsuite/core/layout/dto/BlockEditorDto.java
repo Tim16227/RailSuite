@@ -37,6 +37,7 @@ public final class BlockEditorDto {
 
     public record Marker(
             UUID id,
+            UUID contactAssignmentId,
             BlockMarkerType type,
             int positionMm,
             int lengthMm,
@@ -98,7 +99,7 @@ public final class BlockEditorDto {
             @Min(0)
             int positionMm,
 
-            @Min(1)
+            @Min(0)
             int lengthMm,
 
             @NotNull
@@ -107,7 +108,9 @@ public final class BlockEditorDto {
             @NotNull
             BlockMarkerTrainPosition trainPosition,
 
-            boolean scheduledStop
+            boolean scheduledStop,
+
+            UUID contactAssignmentId
     ) {
     }
 

@@ -106,10 +106,9 @@ public class BlockController {
     getContactDetectors(
             @PathVariable UUID layoutId
     ) {
-        return blockService
-                .getContactDetectors(
-                        layoutId
-                );
+        return blockService.getContactDetectors(
+                layoutId
+        );
     }
 
     @PostMapping("/contact-detectors")
@@ -120,11 +119,25 @@ public class BlockController {
             @Valid @RequestBody
             CreateContactDetectorRequest request
     ) {
-        return blockService
-                .createContactDetector(
-                        layoutId,
-                        request
-                );
+        return blockService.createContactDetector(
+                layoutId,
+                request
+        );
+    }
+
+    @PutMapping("/contact-detectors/{detectorId}")
+    public ContactDetectorResponse
+    updateContactDetector(
+            @PathVariable UUID layoutId,
+            @PathVariable UUID detectorId,
+            @Valid @RequestBody
+            UpdateContactDetectorRequest request
+    ) {
+        return blockService.updateContactDetector(
+                layoutId,
+                detectorId,
+                request
+        );
     }
 
     @DeleteMapping(
@@ -134,10 +147,9 @@ public class BlockController {
     public void deleteContactDetector(
             @PathVariable UUID detectorId
     ) {
-        blockService
-                .deleteContactDetector(
-                        detectorId
-                );
+        blockService.deleteContactDetector(
+                detectorId
+        );
     }
 
     @PostMapping(
@@ -150,11 +162,10 @@ public class BlockController {
             @Valid @RequestBody
             CreateBlockContactAssignmentRequest request
     ) {
-        return blockService
-                .assignContactDetector(
-                        blockId,
-                        request
-                );
+        return blockService.assignContactDetector(
+                blockId,
+                request
+        );
     }
 
     @DeleteMapping(
@@ -164,9 +175,8 @@ public class BlockController {
     public void deleteContactAssignment(
             @PathVariable UUID assignmentId
     ) {
-        blockService
-                .deleteContactAssignment(
-                        assignmentId
-                );
+        blockService.deleteContactAssignment(
+                assignmentId
+        );
     }
 }

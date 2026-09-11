@@ -22,6 +22,14 @@ public class BlockMarker {
     )
     private Block block;
 
+    @ManyToOne(
+            fetch = FetchType.LAZY
+    )
+    @JoinColumn(
+            name = "contact_assignment_id"
+    )
+    private BlockContactAssignment contactAssignment;
+
     @Enumerated(EnumType.STRING)
     @Column(
             nullable = false,
@@ -62,31 +70,15 @@ public class BlockMarker {
             name = "scheduled_stop",
             nullable = false
     )
-    private boolean scheduledStop = false;
+    private boolean scheduledStop =
+            false;
 
     protected BlockMarker() {
     }
 
     public BlockMarker(
             Block block,
-            BlockMarkerType type,
-            int positionMm,
-            int lengthMm,
-            BlockDirection direction
-    ) {
-        this(
-                block,
-                type,
-                positionMm,
-                lengthMm,
-                direction,
-                BlockMarkerTrainPosition.FRONT,
-                false
-        );
-    }
-
-    public BlockMarker(
-            Block block,
+            BlockContactAssignment contactAssignment,
             BlockMarkerType type,
             int positionMm,
             int lengthMm,
@@ -95,9 +87,16 @@ public class BlockMarker {
             boolean scheduledStop
     ) {
         this.block = block;
+        this.contactAssignment =
+                contactAssignment;
         this.type = type;
-        this.positionMm = positionMm;
-        this.lengthMm = lengthMm;
+        this.positionMm =
+                positionMm;
+        this.lengthMm =
+                Math.max(
+                        0,
+                        lengthMm
+                );
         this.direction =
                 direction == null
                         ? BlockDirection.BOTH
@@ -106,7 +105,8 @@ public class BlockMarker {
                 trainPosition == null
                         ? BlockMarkerTrainPosition.FRONT
                         : trainPosition;
-        this.scheduledStop = scheduledStop;
+        this.scheduledStop =
+                scheduledStop;
     }
 
     public UUID getId() {
@@ -115,6 +115,10 @@ public class BlockMarker {
 
     public Block getBlock() {
         return block;
+    }
+
+    public BlockContactAssignment getContactAssignment() {
+        return contactAssignment;
     }
 
     public BlockMarkerType getType() {
@@ -142,22 +146,7 @@ public class BlockMarker {
     }
 
     public void update(
-            BlockMarkerType type,
-            int positionMm,
-            int lengthMm,
-            BlockDirection direction
-    ) {
-        update(
-                type,
-                positionMm,
-                lengthMm,
-                direction,
-                this.trainPosition,
-                this.scheduledStop
-        );
-    }
-
-    public void update(
+            BlockContactAssignment contactAssignment,
             BlockMarkerType type,
             int positionMm,
             int lengthMm,
@@ -165,9 +154,16 @@ public class BlockMarker {
             BlockMarkerTrainPosition trainPosition,
             boolean scheduledStop
     ) {
+        this.contactAssignment =
+                contactAssignment;
         this.type = type;
-        this.positionMm = positionMm;
-        this.lengthMm = lengthMm;
+        this.positionMm =
+                positionMm;
+        this.lengthMm =
+                Math.max(
+                        0,
+                        lengthMm
+                );
         this.direction =
                 direction == null
                         ? BlockDirection.BOTH
@@ -176,6 +172,7 @@ public class BlockMarker {
                 trainPosition == null
                         ? BlockMarkerTrainPosition.FRONT
                         : trainPosition;
-        this.scheduledStop = scheduledStop;
+        this.scheduledStop =
+                scheduledStop;
     }
 }

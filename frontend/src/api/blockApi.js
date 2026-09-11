@@ -1,175 +1,204 @@
-import { apiFetch } from "./apiClient";
+import {
+    apiFetch,
+} from "./apiClient";
 
 export async function getBlocks(
-  layoutId
+    layoutId
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/blocks`
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/blocks`
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function createBlock(
-  layoutId,
-  block
+    layoutId,
+    block
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/blocks`,
-      {
-        method: "POST",
-        body: JSON.stringify(block),
-      }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/blocks`,
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    block
+                ),
+            }
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function updateBlock(
-  layoutId,
-  blockId,
-  block
+    layoutId,
+    blockId,
+    block
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/blocks/${blockId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(block),
-      }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/blocks/${blockId}`,
+            {
+                method: "PUT",
+                body: JSON.stringify(
+                    block
+                ),
+            }
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function deleteBlock(
-  layoutId,
-  blockId
+    layoutId,
+    blockId
 ) {
-  await apiFetch(
-    `/api/layouts/${layoutId}/blocks/${blockId}`,
-    {
-      method: "DELETE",
-    }
-  );
+    await apiFetch(
+        `/api/layouts/${layoutId}/blocks/${blockId}`,
+        {
+            method: "DELETE",
+        }
+    );
 }
 
 export async function addBlockMarker(
-  layoutId,
-  blockId,
-  marker
+    layoutId,
+    blockId,
+    marker
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/blocks/${blockId}/markers`,
-      {
-        method: "POST",
-        body: JSON.stringify(marker),
-      }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/blocks/${blockId}/markers`,
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    marker
+                ),
+            }
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function updateBlockMarker(
-  layoutId,
-  markerId,
-  marker
+    layoutId,
+    markerId,
+    marker
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/block-markers/${markerId}`,
-      {
-        method: "PUT",
-        body: JSON.stringify(marker),
-      }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/block-markers/${markerId}`,
+            {
+                method: "PUT",
+                body: JSON.stringify(
+                    marker
+                ),
+            }
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function deleteBlockMarker(
-  layoutId,
-  markerId
+    layoutId,
+    markerId
 ) {
-  await apiFetch(
-    `/api/layouts/${layoutId}/block-markers/${markerId}`,
-    {
-      method: "DELETE",
-    }
-  );
+    await apiFetch(
+        `/api/layouts/${layoutId}/block-markers/${markerId}`,
+        {
+            method: "DELETE",
+        }
+    );
 }
 
 export async function getContactDetectors(
-  layoutId
+    layoutId
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/contact-detectors`
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/contact-detectors`
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function createContactDetector(
-  layoutId,
-  detector
+    layoutId,
+    detector
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/contact-detectors`,
-      {
-        method: "POST",
-        body: JSON.stringify(
-          detector
-        ),
-      }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/contact-detectors`,
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    detector
+                ),
+            }
+        );
 
-  return response.json();
+    return response.json();
+}
+
+export async function updateContactDetector(
+    layoutId,
+    detectorId,
+    detector
+) {
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/contact-detectors/${detectorId}`,
+            {
+                method: "PUT",
+                body: JSON.stringify(
+                    detector
+                ),
+            }
+        );
+
+    return response.json();
 }
 
 export async function deleteContactDetector(
-  layoutId,
-  detectorId
+    layoutId,
+    detectorId
 ) {
-  await apiFetch(
-    `/api/layouts/${layoutId}/contact-detectors/${detectorId}`,
-    {
-      method: "DELETE",
-    }
-  );
+    await apiFetch(
+        `/api/layouts/${layoutId}/contact-detectors/${detectorId}`,
+        {
+            method: "DELETE",
+        }
+    );
 }
 
 export async function assignContactDetector(
-  layoutId,
-  blockId,
-  assignment
+    layoutId,
+    blockId,
+    assignment
 ) {
-  const response =
-    await apiFetch(
-      `/api/layouts/${layoutId}/blocks/${blockId}/contacts`,
-      {
-        method: "POST",
-        body: JSON.stringify(
-          assignment
-        ),
-      }
-    );
+    const response =
+        await apiFetch(
+            `/api/layouts/${layoutId}/blocks/${blockId}/contacts`,
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    assignment
+                ),
+            }
+        );
 
-  return response.json();
+    return response.json();
 }
 
 export async function deleteContactAssignment(
-  layoutId,
-  assignmentId
+    layoutId,
+    assignmentId
 ) {
-  await apiFetch(
-    `/api/layouts/${layoutId}/block-contact-assignments/${assignmentId}`,
-    {
-      method: "DELETE",
-    }
-  );
+    await apiFetch(
+        `/api/layouts/${layoutId}/block-contact-assignments/${assignmentId}`,
+        {
+            method: "DELETE",
+        }
+    );
 }
