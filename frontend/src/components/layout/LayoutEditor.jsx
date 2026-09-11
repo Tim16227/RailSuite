@@ -1768,8 +1768,8 @@ export function LayoutEditor({
                     editMode={
                         editMode
                     }
-                    onCellProperties={
-                        handleCellProperties
+                    onLayoutCellUpdated={
+                        updateCell
                     }
                 />
             </div>

@@ -13,6 +13,10 @@ import {
 } from "../../models/layout";
 
 import {
+    getLayout,
+} from "../../api/layoutApi";
+
+import {
     getBlocks,
 } from "../../api/blockApi";
 
@@ -134,7 +138,8 @@ export function PropertiesEditor({
         event
     ) {
         const rect =
-            event.currentTarget.getBoundingClientRect();
+            event.currentTarget
+                .getBoundingClientRect();
 
         const x =
             Math.floor(
@@ -191,14 +196,18 @@ export function PropertiesEditor({
     }
 
     function findLayoutCell(
+        currentLayout,
         cell
     ) {
-        if (!cell) {
+        if (
+            !currentLayout ||
+            !cell
+        ) {
             return null;
         }
 
         return (
-            layout.cells.find(
+            currentLayout.cells.find(
                 (layoutCell) =>
                     layoutCell.x ===
                         cell.x &&
@@ -208,7 +217,7 @@ export function PropertiesEditor({
         );
     }
 
-    function handleClick(
+    async function handleClick(
         event
     ) {
         event.preventDefault();
@@ -254,6 +263,7 @@ export function PropertiesEditor({
 
         const layoutCell =
             findLayoutCell(
+                layout,
                 cell
             );
 
@@ -264,26 +274,75 @@ export function PropertiesEditor({
             return;
         }
 
-        open(
-            "layout-turnout",
-            {
-                layoutId:
-                    layout.id,
+        /*
+         * Die Weiche wird bewusst noch einmal
+         * direkt aus der Datenbank geladen.
+         *
+         * Dadurch wird beim erneuten Öffnen
+         * garantiert der aktuelle Stand
+         * angezeigt und nicht eventuell ein
+         * veralteter React-State.
+         */
+        try {
+            const currentLayout =
+                await getLayout(
+                    layout.id
+                );
 
-                cell:
-                    layoutCell,
+            const currentCell =
+                findLayoutCell(
+                    currentLayout,
+                    cell
+                );
 
-                onSaved:
-                    handleTurnoutSaved,
+            if (
+                currentCell?.elementType !==
+                LayoutElementType.TURNOUT
+            ) {
+                return;
             }
-        );
+
+            /*
+             * Gleichzeitig aktualisieren wir
+             * den lokalen Zustand des Editors,
+             * falls sich die Daten zwischenzeitlich
+             * geändert haben.
+             */
+            if (
+                onLayoutCellUpdated
+            ) {
+                onLayoutCellUpdated(
+                    currentCell
+                );
+            }
+
+            open(
+                "layout-turnout",
+                {
+                    layoutId:
+                        layout.id,
+
+                    cell:
+                        currentCell,
+
+                    onSaved:
+                        handleTurnoutSaved,
+                }
+            );
+        } catch (exception) {
+            console.error(
+                "Aktuelle Layoutdaten konnten nicht geladen werden:",
+                exception
+            );
+        }
     }
 
     function handleTurnoutSaved(
         updatedCell
     ) {
         if (
-            onLayoutCellUpdated
+            onLayoutCellUpdated &&
+            updatedCell
         ) {
             onLayoutCellUpdated(
                 updatedCell
