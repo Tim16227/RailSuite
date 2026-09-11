@@ -305,17 +305,24 @@ export function LayoutEditor({
     orientation,
     turnoutHand
   ) {
+    const existingCell =
+      layout.cells.find(
+        (cell) =>
+          cell.x === point.x &&
+          cell.y === point.y
+      );
+
     const updatedCell =
-        await setLayoutCell(
-            layout.id,
-            cell.x,
-            cell.y,
-            cell.elementType,
-            orientation,
-            cell.turnoutHand,
-            cell.digitalSystem?.id ?? null,
-            cell.digitalAddress ?? null
-        );
+      await setLayoutCell(
+        layout.id,
+        point.x,
+        point.y,
+        elementType,
+        orientation,
+        turnoutHand,
+        existingCell?.digitalSystem?.id ?? null,
+        existingCell?.digitalAddress ?? null
+      );
 
     updateCell(
       updatedCell

@@ -13,7 +13,7 @@ const STRAIGHT_INDICATOR = {
 };
 
 const BRANCH_INDICATOR = {
-  position: 0.70,
+  position: 0.30,
   rotation: 0,
 };
 
@@ -27,36 +27,53 @@ const INDICATOR_WIDTH = 3.5;
  * Eine Verbindung zwischen gegenüberliegenden Ports
  * ist die Geradeausverbindung.
  */
-function isOppositePort(first, second) {
+function isOppositePort(
+  first,
+  second
+) {
   return (
-    (first === "NORTH" && second === "SOUTH") ||
-    (first === "SOUTH" && second === "NORTH") ||
+    (first === "NORTH" &&
+      second === "SOUTH") ||
+    (first === "SOUTH" &&
+      second === "NORTH") ||
 
-    (first === "EAST" && second === "WEST") ||
-    (first === "WEST" && second === "EAST") ||
+    (first === "EAST" &&
+      second === "WEST") ||
+    (first === "WEST" &&
+      second === "EAST") ||
 
-    (first === "NORTH_EAST" && second === "SOUTH_WEST") ||
-    (first === "SOUTH_WEST" && second === "NORTH_EAST") ||
+    (first === "NORTH_EAST" &&
+      second === "SOUTH_WEST") ||
+    (first === "SOUTH_WEST" &&
+      second === "NORTH_EAST") ||
 
-    (first === "NORTH_WEST" && second === "SOUTH_EAST") ||
-    (first === "SOUTH_EAST" && second === "NORTH_WEST")
+    (first === "NORTH_WEST" &&
+      second === "SOUTH_EAST") ||
+    (first === "SOUTH_EAST" &&
+      second === "NORTH_WEST")
   );
 }
 
 
 /**
- * Liefert den Port einer Verbindung, der NICHT
- * der gemeinsame Weichenport ist.
+ * Liefert den Port einer Verbindung,
+ * der NICHT der gemeinsame Weichenport ist.
  */
 function getOuterPort(
   connection,
   commonPort
 ) {
-  if (connection.first === commonPort) {
+  if (
+    connection.first ===
+    commonPort
+  ) {
     return connection.second;
   }
 
-  if (connection.second === commonPort) {
+  if (
+    connection.second ===
+    commonPort
+  ) {
     return connection.first;
   }
 
@@ -83,23 +100,27 @@ function findStraightConnection(
 /**
  * Sucht den gemeinsamen Ursprung der Weiche.
  *
- * Das ist der Anschluss, den Geradeaus- und
- * Abzweigverbindung gemeinsam haben.
+ * Das ist der Anschluss, den Geradeaus-
+ * und Abzweigverbindung gemeinsam haben.
  */
 function findCommonPort(
   straightConnection,
   branchConnection
 ) {
   if (
-    straightConnection.first === branchConnection.first ||
-    straightConnection.first === branchConnection.second
+    straightConnection.first ===
+      branchConnection.first ||
+    straightConnection.first ===
+      branchConnection.second
   ) {
     return straightConnection.first;
   }
 
   if (
-    straightConnection.second === branchConnection.first ||
-    straightConnection.second === branchConnection.second
+    straightConnection.second ===
+      branchConnection.first ||
+    straightConnection.second ===
+      branchConnection.second
   ) {
     return straightConnection.second;
   }
@@ -109,14 +130,32 @@ function findCommonPort(
 
 
 /**
- * Erzeugt die Geometrie eines Weichenarms.
- *
- * Der Ursprung ist jetzt NICHT mehr die Mitte der Zelle.
- *
- * Stattdessen beginnt der Arm exakt am gemeinsamen
- * Anschluss der Weiche.
+ * Gibt die Mitte der Kachel zurück.
  */
-function getArmGeometry(
+function getCenterPosition(
+  size
+) {
+  const center =
+    size / 2;
+
+  return {
+    x: center,
+    y: center,
+  };
+}
+
+
+/**
+ * Erzeugt die Geometrie eines
+ * normalen Weichenarms.
+ *
+ * Dieser Arm beginnt am tatsächlichen
+ * Port und endet am äußeren Port.
+ *
+ * Wird für die Geradeausverbindung
+ * verwendet.
+ */
+function getStraightArmGeometry(
   connection,
   commonPort,
   size
@@ -131,79 +170,48 @@ function getArmGeometry(
     return null;
   }
 
-
-  /*
-   * Der tatsächliche Ursprung der Weiche.
-   *
-   * Das ist der Anschluss, an dem sich Geradeaus-
-   * und Abzweigverbindung treffen.
-   */
   const origin =
     getPortPosition(
       commonPort,
       size
     );
 
-
-  /*
-   * Der äußere Anschluss des jeweiligen Arms.
-   */
   const outer =
     getPortPosition(
       outerPort,
       size
     );
 
-
-  /*
-   * Richtungsvektor vom Ursprung zum äußeren Anschluss.
-   */
   const dx =
-    outer.x - origin.x;
+    outer.x -
+    origin.x;
 
   const dy =
-    outer.y - origin.y;
-
+    outer.y -
+    origin.y;
 
   const length =
     Math.sqrt(
       dx * dx +
-      dy * dy
+        dy * dy
     );
-
 
   if (length === 0) {
     return null;
   }
 
-
-  /*
-   * Normalisierte Richtung entlang des Arms.
-   */
   const alongX =
     dx / length;
 
   const alongY =
     dy / length;
 
-
-  /*
-   * Senkrechter Vektor zum Arm.
-   *
-   * Der wird aktuell noch nicht für die Position benötigt,
-   * ist aber Bestandteil der Geometrie und kann später für
-   * einen seitlichen Indicator-Versatz verwendet werden.
-   */
   const perpendicularX =
     -alongY;
 
   const perpendicularY =
     alongX;
 
-
-  /*
-   * Winkel des tatsächlichen Arms.
-   */
   const armAngle =
     Math.atan2(
       alongY,
@@ -212,13 +220,128 @@ function getArmGeometry(
     180 /
     Math.PI;
 
+  return {
+    originX:
+      origin.x,
+
+    originY:
+      origin.y,
+
+    outerX:
+      outer.x,
+
+    outerY:
+      outer.y,
+
+    alongX,
+    alongY,
+
+    perpendicularX,
+    perpendicularY,
+
+    armAngle,
+
+    length,
+  };
+}
+
+
+/**
+ * Erzeugt die Geometrie des
+ * neuen Weichenabzweigs.
+ *
+ * WICHTIG:
+ *
+ * Der Abzweig beginnt NICHT mehr
+ * am gemeinsamen Außenport.
+ *
+ * Stattdessen:
+ *
+ *        Außenport
+ *            \
+ *             \
+ *             ● Mitte
+ *
+ * Der gemeinsame Weichenursprung
+ * liegt damit optisch in der Mitte
+ * der Kachel.
+ */
+function getBranchArmGeometry(
+  connection,
+  commonPort,
+  size
+) {
+  const outerPort =
+    getOuterPort(
+      connection,
+      commonPort
+    );
+
+  if (!outerPort) {
+    return null;
+  }
+
+  const origin =
+    getCenterPosition(
+      size
+    );
+
+  const outer =
+    getPortPosition(
+      outerPort,
+      size
+    );
+
+  const dx =
+    outer.x -
+    origin.x;
+
+  const dy =
+    outer.y -
+    origin.y;
+
+  const length =
+    Math.sqrt(
+      dx * dx +
+        dy * dy
+    );
+
+  if (length === 0) {
+    return null;
+  }
+
+  const alongX =
+    dx / length;
+
+  const alongY =
+    dy / length;
+
+  const perpendicularX =
+    -alongY;
+
+  const perpendicularY =
+    alongX;
+
+  const armAngle =
+    Math.atan2(
+      alongY,
+      alongX
+    ) *
+    180 /
+    Math.PI;
 
   return {
-    originX: origin.x,
-    originY: origin.y,
+    originX:
+      origin.x,
 
-    outerX: outer.x,
-    outerY: outer.y,
+    originY:
+      origin.y,
+
+    outerX:
+      outer.x,
+
+    outerY:
+      outer.y,
 
     alongX,
     alongY,
@@ -236,16 +359,11 @@ function getArmGeometry(
 /**
  * Berechnet die Indicator-Position.
  *
- * WICHTIG:
+ * Die Position wird relativ zum tatsächlichen
+ * Ursprung des jeweiligen Arms berechnet.
  *
- * Die Position wird jetzt vom gemeinsamen
- * Weichenursprung aus berechnet.
- *
- * position:
- *
- *   0.0 = Weichenursprung
- *   0.5 = Mitte des Arms
- *   1.0 = äußerer Anschluss
+ * Beim Abzweig ist der Ursprung jetzt die
+ * Kachelmitte.
  */
 function getIndicatorGeometry(
   arm,
@@ -255,27 +373,19 @@ function getIndicatorGeometry(
     arm.length *
     settings.position;
 
-
   const x =
     arm.originX +
     arm.alongX *
       distance;
-
 
   const y =
     arm.originY +
     arm.alongY *
       distance;
 
-
-  /*
-   * Rotation relativ zur tatsächlichen Richtung
-   * des Weichenarms.
-   */
   const rotation =
     arm.armAngle +
     settings.rotation;
-
 
   return {
     x,
@@ -301,13 +411,55 @@ function TurnoutIndicator({
         y -
         INDICATOR_WIDTH / 2
       }
-      width={INDICATOR_LENGTH}
-      height={INDICATOR_WIDTH}
+      width={
+        INDICATOR_LENGTH
+      }
+      height={
+        INDICATOR_WIDTH
+      }
       rx={1}
       ry={1}
       transform={
         `rotate(${rotation} ${x} ${y})`
       }
+    />
+  );
+}
+
+
+/**
+ * Zeichnet den normalen geraden Weichenarm.
+ */
+function renderStraightArm(
+  arm
+) {
+  return (
+    <TrackPath
+      d={`
+        M ${arm.originX} ${arm.originY}
+        L ${arm.outerX} ${arm.outerY}
+      `}
+    />
+  );
+}
+
+
+/**
+ * Zeichnet den neuen Abzweig.
+ *
+ * Der Abzweig beginnt in der Mitte
+ * der Kachel und läuft von dort
+ * diagonal zur Ecke.
+ */
+function renderBranchArm(
+  arm
+) {
+  return (
+    <TrackPath
+      d={`
+        M ${arm.originX} ${arm.originY}
+        L ${arm.outerX} ${arm.outerY}
+      `}
     />
   );
 }
@@ -332,57 +484,7 @@ export function TurnoutRenderer({
 
   /*
    * ---------------------------------------------------------
-   * SCHIENEN ZEICHNEN
-   * ---------------------------------------------------------
-   */
-
-  const tracks =
-    connections.map(
-      (connection, index) => {
-        const first =
-          getPortPosition(
-            connection.first,
-            size
-          );
-
-        const second =
-          getPortPosition(
-            connection.second,
-            size
-          );
-
-
-        const d = `
-          M ${first.x} ${first.y}
-          L ${second.x} ${second.y}
-        `;
-
-
-        return (
-          <TrackPath
-            key={index}
-            d={d}
-          />
-        );
-      }
-    );
-
-
-  /*
-   * Ohne Zustand kein Indicator.
-   */
-  if (!turnoutState) {
-    return (
-      <>
-        {tracks}
-      </>
-    );
-  }
-
-
-  /*
-   * ---------------------------------------------------------
-   * GERADEAUSVERBINDUNG
+   * GERADE VERBINDUNG FINDEN
    * ---------------------------------------------------------
    */
 
@@ -391,11 +493,37 @@ export function TurnoutRenderer({
       connections
     );
 
-
   if (!straightConnection) {
     return (
       <>
-        {tracks}
+        {connections.map(
+          (
+            connection,
+            index
+          ) => {
+            const first =
+              getPortPosition(
+                connection.first,
+                size
+              );
+
+            const second =
+              getPortPosition(
+                connection.second,
+                size
+              );
+
+            return (
+              <TrackPath
+                key={index}
+                d={`
+                  M ${first.x} ${first.y}
+                  L ${second.x} ${second.y}
+                `}
+              />
+            );
+          }
+        )}
       </>
     );
   }
@@ -403,7 +531,7 @@ export function TurnoutRenderer({
 
   /*
    * ---------------------------------------------------------
-   * ABZWEIGVERBINDUNG
+   * ABZWEIGVERBINDUNG FINDEN
    * ---------------------------------------------------------
    */
 
@@ -414,11 +542,37 @@ export function TurnoutRenderer({
         straightConnection
     );
 
-
   if (!branchConnection) {
     return (
       <>
-        {tracks}
+        {connections.map(
+          (
+            connection,
+            index
+          ) => {
+            const first =
+              getPortPosition(
+                connection.first,
+                size
+              );
+
+            const second =
+              getPortPosition(
+                connection.second,
+                size
+              );
+
+            return (
+              <TrackPath
+                key={index}
+                d={`
+                  M ${first.x} ${first.y}
+                  L ${second.x} ${second.y}
+                `}
+              />
+            );
+          }
+        )}
       </>
     );
   }
@@ -426,10 +580,8 @@ export function TurnoutRenderer({
 
   /*
    * ---------------------------------------------------------
-   * WEICHENURSPRUNG
+   * GEMEINSAMEN WEICHENPORT FINDEN
    * ---------------------------------------------------------
-   *
-   * Der gemeinsame Anschluss von Geradeaus und Abzweig.
    */
 
   const commonPort =
@@ -438,11 +590,37 @@ export function TurnoutRenderer({
       branchConnection
     );
 
-
   if (!commonPort) {
     return (
       <>
-        {tracks}
+        {connections.map(
+          (
+            connection,
+            index
+          ) => {
+            const first =
+              getPortPosition(
+                connection.first,
+                size
+              );
+
+            const second =
+              getPortPosition(
+                connection.second,
+                size
+              );
+
+            return (
+              <TrackPath
+                key={index}
+                d={`
+                  M ${first.x} ${first.y}
+                  L ${second.x} ${second.y}
+                `}
+              />
+            );
+          }
+        )}
       </>
     );
   }
@@ -455,30 +633,24 @@ export function TurnoutRenderer({
    */
 
   const straightArm =
-    getArmGeometry(
+    getStraightArmGeometry(
       straightConnection,
       commonPort,
       size
     );
 
-
   const branchArm =
-    getArmGeometry(
+    getBranchArmGeometry(
       branchConnection,
       commonPort,
       size
     );
 
-
   if (
     !straightArm ||
     !branchArm
   ) {
-    return (
-      <>
-        {tracks}
-      </>
-    );
+    return null;
   }
 
 
@@ -500,15 +672,15 @@ export function TurnoutRenderer({
 
   const isBranchActive =
     turnoutHand === "RIGHT"
-      ? turnoutState === "RIGHT"
-      : turnoutState === "LEFT";
-
+      ? turnoutState ===
+        "RIGHT"
+      : turnoutState ===
+        "LEFT";
 
   const activeArm =
     isBranchActive
       ? branchArm
       : straightArm;
-
 
   const settings =
     isBranchActive
@@ -518,9 +690,41 @@ export function TurnoutRenderer({
 
   /*
    * ---------------------------------------------------------
-   * INDICATOR BERECHNEN
+   * SCHIENEN ZEICHNEN
+   * ---------------------------------------------------------
+   *
+   * Die Gerade läuft weiterhin vollständig
+   * von Rand zu Rand.
+   *
+   * Der Abzweig beginnt dagegen in der Mitte
+   * der Kachel.
+   */
+
+  const straightTrack =
+    renderStraightArm(
+      straightArm
+    );
+
+  const branchTrack =
+    renderBranchArm(
+      branchArm
+    );
+
+
+  /*
+   * ---------------------------------------------------------
+   * INDICATOR
    * ---------------------------------------------------------
    */
+
+  if (!turnoutState) {
+    return (
+      <>
+        {straightTrack}
+        {branchTrack}
+      </>
+    );
+  }
 
   const indicator =
     getIndicatorGeometry(
@@ -537,12 +741,15 @@ export function TurnoutRenderer({
 
   return (
     <>
-      {tracks}
+      {straightTrack}
+      {branchTrack}
 
       <TurnoutIndicator
         x={indicator.x}
         y={indicator.y}
-        rotation={indicator.rotation}
+        rotation={
+          indicator.rotation
+        }
       />
     </>
   );
