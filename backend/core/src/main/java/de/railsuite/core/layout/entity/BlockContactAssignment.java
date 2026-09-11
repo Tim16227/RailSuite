@@ -54,6 +54,12 @@ public class BlockContactAssignment {
     @Column(name = "position_mm")
     private Integer positionMm;
 
+    @Column(
+            name = "length_mm",
+            nullable = false
+    )
+    private int lengthMm = 1000;
+
     protected BlockContactAssignment() {
     }
 
@@ -63,12 +69,31 @@ public class BlockContactAssignment {
             BlockContactRole role,
             Integer positionMm
     ) {
+        this(
+                block,
+                contactDetector,
+                role,
+                positionMm,
+                1000
+        );
+    }
+
+    public BlockContactAssignment(
+            Block block,
+            ContactDetector contactDetector,
+            BlockContactRole role,
+            Integer positionMm,
+            int lengthMm
+    ) {
         this.block = block;
-        this.contactDetector =
-                contactDetector;
+        this.contactDetector = contactDetector;
         this.role = role;
-        this.positionMm =
-                positionMm;
+        this.positionMm = positionMm;
+        this.lengthMm =
+                Math.max(
+                        1,
+                        lengthMm
+                );
     }
 
     public UUID getId() {
@@ -89,5 +114,22 @@ public class BlockContactAssignment {
 
     public Integer getPositionMm() {
         return positionMm;
+    }
+
+    public int getLengthMm() {
+        return lengthMm;
+    }
+
+    public void updateEditorPosition(
+            Integer positionMm,
+            int lengthMm
+    ) {
+        this.positionMm =
+                positionMm;
+        this.lengthMm =
+                Math.max(
+                        1,
+                        lengthMm
+                );
     }
 }

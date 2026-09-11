@@ -14,7 +14,10 @@ public class Block {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
     @JoinColumn(
             name = "layout_id",
             nullable = false
@@ -40,6 +43,54 @@ public class Block {
     )
     private BlockDirection direction =
             BlockDirection.BOTH;
+
+    @Column(
+            name = "show_signals",
+            nullable = false
+    )
+    private boolean showSignals = true;
+
+    @Column(
+            name = "visible_only_in_edit_mode",
+            nullable = false
+    )
+    private boolean visibleOnlyInEditMode = false;
+
+    @Column(
+            name = "request_yellow",
+            nullable = false
+    )
+    private boolean requestYellow = false;
+
+    @Column(
+            name = "maximum_speed_kmh"
+    )
+    private Integer maximumSpeedKmh;
+
+    @Column(
+            name = "slow_speed_kmh"
+    )
+    private Integer slowSpeedKmh;
+
+    @Column(
+            name = "include_in_train_tracking",
+            nullable = false
+    )
+    private boolean includeInTrainTracking = true;
+
+    @Column(
+            name = "maximum_train_length_mm"
+    )
+    private Integer maximumTrainLengthMm;
+
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "grid_orientation",
+            nullable = false,
+            length = 20
+    )
+    private BlockGridOrientation gridOrientation =
+            BlockGridOrientation.HORIZONTAL;
 
     @OneToMany(
             mappedBy = "block",
@@ -105,6 +156,38 @@ public class Block {
         return direction;
     }
 
+    public boolean isShowSignals() {
+        return showSignals;
+    }
+
+    public boolean isVisibleOnlyInEditMode() {
+        return visibleOnlyInEditMode;
+    }
+
+    public boolean isRequestYellow() {
+        return requestYellow;
+    }
+
+    public Integer getMaximumSpeedKmh() {
+        return maximumSpeedKmh;
+    }
+
+    public Integer getSlowSpeedKmh() {
+        return slowSpeedKmh;
+    }
+
+    public boolean isIncludeInTrainTracking() {
+        return includeInTrainTracking;
+    }
+
+    public Integer getMaximumTrainLengthMm() {
+        return maximumTrainLengthMm;
+    }
+
+    public BlockGridOrientation getGridOrientation() {
+        return gridOrientation;
+    }
+
     public List<BlockCell> getCells() {
         return cells;
     }
@@ -128,6 +211,44 @@ public class Block {
                 direction == null
                         ? BlockDirection.BOTH
                         : direction;
+    }
+
+    public void updateEditorProperties(
+            String name,
+            int lengthMm,
+            BlockDirection direction,
+            boolean showSignals,
+            boolean visibleOnlyInEditMode,
+            boolean requestYellow,
+            Integer maximumSpeedKmh,
+            Integer slowSpeedKmh,
+            boolean includeInTrainTracking,
+            Integer maximumTrainLengthMm,
+            BlockGridOrientation gridOrientation
+    ) {
+        this.name = name;
+        this.lengthMm = lengthMm;
+        this.direction =
+                direction == null
+                        ? BlockDirection.BOTH
+                        : direction;
+
+        this.showSignals = showSignals;
+        this.visibleOnlyInEditMode =
+                visibleOnlyInEditMode;
+        this.requestYellow = requestYellow;
+        this.maximumSpeedKmh =
+                maximumSpeedKmh;
+        this.slowSpeedKmh =
+                slowSpeedKmh;
+        this.includeInTrainTracking =
+                includeInTrainTracking;
+        this.maximumTrainLengthMm =
+                maximumTrainLengthMm;
+        this.gridOrientation =
+                gridOrientation == null
+                        ? BlockGridOrientation.HORIZONTAL
+                        : gridOrientation;
     }
 
     public void replaceCells(

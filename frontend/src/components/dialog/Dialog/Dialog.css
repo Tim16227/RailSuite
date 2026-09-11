@@ -45,13 +45,27 @@
 
     flex-direction: column;
 
-    /*
-     * Sicherheitshalber ebenfalls
-     * oberhalb des Backdrops.
-     */
     position: relative;
 
     z-index: 1001;
+}
+
+/*
+ * Der Blockdialog enthält zwei
+ * Karteikarten und den visuellen
+ * Blockeditor. Dafür braucht er
+ * deutlich mehr Platz als die
+ * normalen Dialoge.
+ */
+.modal:has(.block-properties-dialog) {
+    width: min(
+        1180px,
+        calc(100vw - 40px)
+    );
+
+    max-height: calc(
+        100vh - 40px
+    );
 }
 
 .modal-header {
@@ -74,6 +88,8 @@
     flex-direction: column;
 
     gap: 16px;
+
+    overflow-y: auto;
 }
 
 .modal-footer {

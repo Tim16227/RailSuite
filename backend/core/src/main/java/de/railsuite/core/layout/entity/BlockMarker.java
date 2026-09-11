@@ -49,6 +49,21 @@ public class BlockMarker {
     private BlockDirection direction =
             BlockDirection.BOTH;
 
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "train_position",
+            nullable = false,
+            length = 20
+    )
+    private BlockMarkerTrainPosition trainPosition =
+            BlockMarkerTrainPosition.FRONT;
+
+    @Column(
+            name = "scheduled_stop",
+            nullable = false
+    )
+    private boolean scheduledStop = false;
+
     protected BlockMarker() {
     }
 
@@ -59,6 +74,26 @@ public class BlockMarker {
             int lengthMm,
             BlockDirection direction
     ) {
+        this(
+                block,
+                type,
+                positionMm,
+                lengthMm,
+                direction,
+                BlockMarkerTrainPosition.FRONT,
+                false
+        );
+    }
+
+    public BlockMarker(
+            Block block,
+            BlockMarkerType type,
+            int positionMm,
+            int lengthMm,
+            BlockDirection direction,
+            BlockMarkerTrainPosition trainPosition,
+            boolean scheduledStop
+    ) {
         this.block = block;
         this.type = type;
         this.positionMm = positionMm;
@@ -67,6 +102,11 @@ public class BlockMarker {
                 direction == null
                         ? BlockDirection.BOTH
                         : direction;
+        this.trainPosition =
+                trainPosition == null
+                        ? BlockMarkerTrainPosition.FRONT
+                        : trainPosition;
+        this.scheduledStop = scheduledStop;
     }
 
     public UUID getId() {
@@ -93,11 +133,37 @@ public class BlockMarker {
         return direction;
     }
 
+    public BlockMarkerTrainPosition getTrainPosition() {
+        return trainPosition;
+    }
+
+    public boolean isScheduledStop() {
+        return scheduledStop;
+    }
+
     public void update(
             BlockMarkerType type,
             int positionMm,
             int lengthMm,
             BlockDirection direction
+    ) {
+        update(
+                type,
+                positionMm,
+                lengthMm,
+                direction,
+                this.trainPosition,
+                this.scheduledStop
+        );
+    }
+
+    public void update(
+            BlockMarkerType type,
+            int positionMm,
+            int lengthMm,
+            BlockDirection direction,
+            BlockMarkerTrainPosition trainPosition,
+            boolean scheduledStop
     ) {
         this.type = type;
         this.positionMm = positionMm;
@@ -106,5 +172,10 @@ public class BlockMarker {
                 direction == null
                         ? BlockDirection.BOTH
                         : direction;
+        this.trainPosition =
+                trainPosition == null
+                        ? BlockMarkerTrainPosition.FRONT
+                        : trainPosition;
+        this.scheduledStop = scheduledStop;
     }
 }
