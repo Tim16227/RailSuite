@@ -4,8 +4,8 @@ spring:
       on-profile: dev
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/canteen
-    username: canteen_user
+    url: jdbc:postgresql://localhost:5432/railsuite
+    username: railsuite_user
     password: secret
     driver-class-name: org.postgresql.Driver
 

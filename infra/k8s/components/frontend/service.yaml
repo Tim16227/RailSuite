@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: canteen-frontend
+  name: railsuite-frontend
   namespace: railsuite
 spec:
   selector:
-    app: canteen-frontend
+    app: railsuite-frontend
   ports:
     - port: 80
       targetPort: 80

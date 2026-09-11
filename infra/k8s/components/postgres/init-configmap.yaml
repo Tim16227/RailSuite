@@ -10,4 +10,4 @@ data:
 
     GRANT ALL PRIVILEGES
     ON SCHEMA keycloak
-    TO canteen_user;
+    TO railsuite_user;

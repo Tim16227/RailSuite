@@ -18,9 +18,9 @@ spec:
           image: postgres:16
           env:
             - name: POSTGRES_DB
-              value: canteen
+              value: railsuite
             - name: POSTGRES_USER
-              value: canteen_user
+              value: railsuite_user
             - name: POSTGRES_PASSWORD
               value: secret
           volumeMounts:

@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: canteen-ingress
+  name: railsuite-ingress
   namespace: railsuite
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
@@ -15,7 +15,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: canteen-frontend
+                name: railsuite-frontend
                 port:
                   number: 80
 
@@ -23,6 +23,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: canteen-core
+                name: railsuite-core
                 port:
                   number: 8080

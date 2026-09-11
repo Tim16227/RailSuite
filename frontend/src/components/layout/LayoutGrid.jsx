@@ -20,6 +20,8 @@ import "../../styles/layout-editor.css";
 
 const CELL_SIZE = 40;
 
+const SELECTION_HANDLE_RADIUS = 4;
+
 export function LayoutGrid({
     layout,
     tool,
@@ -46,6 +48,46 @@ export function LayoutGrid({
         setSwitchingTurnout,
     ] = useState(null);
 
+    /*
+     * ---------------------------------------------------------
+     * AUSWAHL
+     * ---------------------------------------------------------
+     *
+     * Die Auswahl wird als Zellbereich gespeichert.
+     *
+     * Beispiel:
+     *
+     * {
+     *     minX: 2,
+     *     minY: 3,
+     *     maxX: 6,
+     *     maxY: 7
+     * }
+     *
+     * Damit können wir später sehr einfach
+     * mehrere Zellen gemeinsam bearbeiten.
+     */
+
+    const [
+        selectedRange,
+        setSelectedRange,
+    ] = useState(null);
+
+    /*
+     * Zustand für das Ziehen eines
+     * Auswahl-Griffes.
+     */
+    const selectionDragRef =
+        useRef({
+            active: false,
+            pointerId: null,
+            handle: null,
+            anchor: null,
+        });
+
+    /*
+     * Zustand für die normalen Zeichenwerkzeuge.
+     */
     const pointerStateRef =
         useRef({
             active: false,
@@ -58,6 +100,12 @@ export function LayoutGrid({
     if (!layout) {
         return null;
     }
+
+    /*
+     * ---------------------------------------------------------
+     * ZELLENPOSITION
+     * ---------------------------------------------------------
+     */
 
     function getCellFromPointer(
         event
@@ -119,6 +167,12 @@ export function LayoutGrid({
         );
     }
 
+    /*
+     * ---------------------------------------------------------
+     * WEICHEN
+     * ---------------------------------------------------------
+     */
+
     function getTurnoutState(
         cell
     ) {
@@ -173,9 +227,6 @@ export function LayoutGrid({
          * Ohne digitale Zuordnung kann
          * das Backend die Weiche nicht
          * stellen.
-         *
-         * Wir lassen den Klick trotzdem
-         * nicht einfach optisch umspringen.
          */
         if (
             cell.digitalSystem == null ||
@@ -201,11 +252,6 @@ export function LayoutGrid({
                 nextState
             );
 
-            /*
-             * Erst wenn das Backend den
-             * Befehl akzeptiert hat, ändern
-             * wir die Darstellung.
-             */
             setTurnoutStates(
                 (current) => ({
                     ...current,
@@ -224,6 +270,680 @@ export function LayoutGrid({
             );
         }
     }
+
+    /*
+     * ---------------------------------------------------------
+     * AUSWAHL
+     * ---------------------------------------------------------
+     */
+
+    function createSingleCellSelection(
+        cell
+    ) {
+        if (!cell) {
+            return;
+        }
+
+        setSelectedRange({
+            minX: cell.x,
+            minY: cell.y,
+            maxX: cell.x,
+            maxY: cell.y,
+        });
+    }
+
+    function clamp(
+        value,
+        min,
+        max
+    ) {
+        return Math.max(
+            min,
+            Math.min(
+                max,
+                value
+            )
+        );
+    }
+
+    function getSelectionBounds() {
+        if (!selectedRange) {
+            return null;
+        }
+
+        return {
+            minX: Math.min(
+                selectedRange.minX,
+                selectedRange.maxX
+            ),
+
+            minY: Math.min(
+                selectedRange.minY,
+                selectedRange.maxY
+            ),
+
+            maxX: Math.max(
+                selectedRange.minX,
+                selectedRange.maxX
+            ),
+
+            maxY: Math.max(
+                selectedRange.minY,
+                selectedRange.maxY
+            ),
+        };
+    }
+
+    function getSelectionPixelRect() {
+        const bounds =
+            getSelectionBounds();
+
+        if (!bounds) {
+            return null;
+        }
+
+        return {
+            x:
+                bounds.minX *
+                CELL_SIZE,
+
+            y:
+                bounds.minY *
+                CELL_SIZE,
+
+            width:
+                (
+                    bounds.maxX -
+                    bounds.minX +
+                    1
+                ) *
+                CELL_SIZE,
+
+            height:
+                (
+                    bounds.maxY -
+                    bounds.minY +
+                    1
+                ) *
+                CELL_SIZE,
+        };
+    }
+
+    /*
+     * Positionen der acht Griffe.
+     *
+     * Die Namen sind bewusst eindeutig,
+     * damit die Berechnung beim Ziehen
+     * einfach bleibt.
+     */
+    function getSelectionHandles() {
+        const rect =
+            getSelectionPixelRect();
+
+        if (!rect) {
+            return [];
+        }
+
+        const left =
+            rect.x;
+
+        const right =
+            rect.x +
+            rect.width;
+
+        const top =
+            rect.y;
+
+        const bottom =
+            rect.y +
+            rect.height;
+
+        const centerX =
+            rect.x +
+            rect.width / 2;
+
+        const centerY =
+            rect.y +
+            rect.height / 2;
+
+        return [
+            {
+                name: "TOP_LEFT",
+                x: left,
+                y: top,
+            },
+
+            {
+                name: "TOP",
+                x: centerX,
+                y: top,
+            },
+
+            {
+                name: "TOP_RIGHT",
+                x: right,
+                y: top,
+            },
+
+            {
+                name: "RIGHT",
+                x: right,
+                y: centerY,
+            },
+
+            {
+                name: "BOTTOM_RIGHT",
+                x: right,
+                y: bottom,
+            },
+
+            {
+                name: "BOTTOM",
+                x: centerX,
+                y: bottom,
+            },
+
+            {
+                name: "BOTTOM_LEFT",
+                x: left,
+                y: bottom,
+            },
+
+            {
+                name: "LEFT",
+                x: left,
+                y: centerY,
+            },
+        ];
+    }
+
+    function startSelectionHandleDrag(
+        event,
+        handle
+    ) {
+        if (
+            !editMode ||
+            tool !== Tool.NONE ||
+            !selectedRange
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const bounds =
+            getSelectionBounds();
+
+        if (!bounds) {
+            return;
+        }
+
+        /*
+         * Der gegenüberliegende Punkt bleibt
+         * beim Ziehen fixiert.
+         */
+        let anchor;
+
+        switch (handle.name) {
+            case "TOP_LEFT":
+                anchor = {
+                    x: bounds.maxX,
+                    y: bounds.maxY,
+                };
+                break;
+
+            case "TOP":
+                anchor = {
+                    x: null,
+                    y: bounds.maxY,
+                };
+                break;
+
+            case "TOP_RIGHT":
+                anchor = {
+                    x: bounds.minX,
+                    y: bounds.maxY,
+                };
+                break;
+
+            case "RIGHT":
+                anchor = {
+                    x: bounds.minX,
+                    y: null,
+                };
+                break;
+
+            case "BOTTOM_RIGHT":
+                anchor = {
+                    x: bounds.minX,
+                    y: bounds.minY,
+                };
+                break;
+
+            case "BOTTOM":
+                anchor = {
+                    x: null,
+                    y: bounds.minY,
+                };
+                break;
+
+            case "BOTTOM_LEFT":
+                anchor = {
+                    x: bounds.maxX,
+                    y: bounds.minY,
+                };
+                break;
+
+            case "LEFT":
+                anchor = {
+                    x: bounds.maxX,
+                    y: null,
+                };
+                break;
+
+            default:
+                return;
+        }
+
+        selectionDragRef.current = {
+            active: true,
+            pointerId:
+                event.pointerId,
+            handle:
+                handle.name,
+            anchor,
+        };
+
+        event.currentTarget.setPointerCapture(
+            event.pointerId
+        );
+    }
+
+    function updateSelectionFromHandle(
+        event
+    ) {
+        const state =
+            selectionDragRef.current;
+
+        if (
+            !state.active ||
+            state.pointerId !==
+                event.pointerId
+        ) {
+            return;
+        }
+
+        const cell =
+            getCellFromPointer(
+                event
+            );
+
+        if (!cell) {
+            return;
+        }
+
+        const anchor =
+            state.anchor;
+
+        let minX;
+        let maxX;
+        let minY;
+        let maxY;
+
+        switch (state.handle) {
+            case "TOP_LEFT":
+                minX = Math.min(
+                    cell.x,
+                    anchor.x
+                );
+
+                maxX = Math.max(
+                    cell.x,
+                    anchor.x
+                );
+
+                minY = Math.min(
+                    cell.y,
+                    anchor.y
+                );
+
+                maxY = Math.max(
+                    cell.y,
+                    anchor.y
+                );
+                break;
+
+            case "TOP":
+                minX =
+                    selectedRange.minX;
+
+                maxX =
+                    selectedRange.maxX;
+
+                minY = Math.min(
+                    cell.y,
+                    anchor.y
+                );
+
+                maxY = Math.max(
+                    cell.y,
+                    anchor.y
+                );
+                break;
+
+            case "TOP_RIGHT":
+                minX = Math.min(
+                    cell.x,
+                    anchor.x
+                );
+
+                maxX = Math.max(
+                    cell.x,
+                    anchor.x
+                );
+
+                minY = Math.min(
+                    cell.y,
+                    anchor.y
+                );
+
+                maxY = Math.max(
+                    cell.y,
+                    anchor.y
+                );
+                break;
+
+            case "RIGHT":
+                minX = Math.min(
+                    cell.x,
+                    anchor.x
+                );
+
+                maxX = Math.max(
+                    cell.x,
+                    anchor.x
+                );
+
+                minY =
+                    selectedRange.minY;
+
+                maxY =
+                    selectedRange.maxY;
+                break;
+
+            case "BOTTOM_RIGHT":
+                minX = Math.min(
+                    cell.x,
+                    anchor.x
+                );
+
+                maxX = Math.max(
+                    cell.x,
+                    anchor.x
+                );
+
+                minY = Math.min(
+                    cell.y,
+                    anchor.y
+                );
+
+                maxY = Math.max(
+                    cell.y,
+                    anchor.y
+                );
+                break;
+
+            case "BOTTOM":
+                minX =
+                    selectedRange.minX;
+
+                maxX =
+                    selectedRange.maxX;
+
+                minY = Math.min(
+                    cell.y,
+                    anchor.y
+                );
+
+                maxY = Math.max(
+                    cell.y,
+                    anchor.y
+                );
+                break;
+
+            case "BOTTOM_LEFT":
+                minX = Math.min(
+                    cell.x,
+                    anchor.x
+                );
+
+                maxX = Math.max(
+                    cell.x,
+                    anchor.x
+                );
+
+                minY = Math.min(
+                    cell.y,
+                    anchor.y
+                );
+
+                maxY = Math.max(
+                    cell.y,
+                    anchor.y
+                );
+                break;
+
+            case "LEFT":
+                minX = Math.min(
+                    cell.x,
+                    anchor.x
+                );
+
+                maxX = Math.max(
+                    cell.x,
+                    anchor.x
+                );
+
+                minY =
+                    selectedRange.minY;
+
+                maxY =
+                    selectedRange.maxY;
+                break;
+
+            default:
+                return;
+        }
+
+        minX = clamp(
+            minX,
+            0,
+            layout.width - 1
+        );
+
+        maxX = clamp(
+            maxX,
+            0,
+            layout.width - 1
+        );
+
+        minY = clamp(
+            minY,
+            0,
+            layout.height - 1
+        );
+
+        maxY = clamp(
+            maxY,
+            0,
+            layout.height - 1
+        );
+
+        setSelectedRange({
+            minX,
+            minY,
+            maxX,
+            maxY,
+        });
+    }
+
+    function finishSelectionHandleDrag(
+        event
+    ) {
+        const state =
+            selectionDragRef.current;
+
+        if (
+            !state.active ||
+            state.pointerId !==
+                event.pointerId
+        ) {
+            return;
+        }
+
+        selectionDragRef.current = {
+            active: false,
+            pointerId: null,
+            handle: null,
+            anchor: null,
+        };
+
+        if (
+            event.currentTarget.hasPointerCapture(
+                event.pointerId
+            )
+        ) {
+            event.currentTarget.releasePointerCapture(
+                event.pointerId
+            );
+        }
+    }
+
+    function handleSelectionPointerMove(
+        event
+    ) {
+        if (
+            !selectionDragRef.current
+                .active
+        ) {
+            return;
+        }
+
+        updateSelectionFromHandle(
+            event
+        );
+    }
+
+    function handleSelectionPointerUp(
+        event
+    ) {
+        finishSelectionHandleDrag(
+            event
+        );
+    }
+
+    function renderSelection() {
+        if (
+            !editMode ||
+            tool !== Tool.NONE ||
+            !selectedRange
+        ) {
+            return null;
+        }
+
+        const rect =
+            getSelectionPixelRect();
+
+        if (!rect) {
+            return null;
+        }
+
+        const handles =
+            getSelectionHandles();
+
+        return (
+            <g
+                className="layout-cell-selection"
+                pointerEvents="none"
+            >
+                <rect
+                    className="layout-cell-selection-border"
+                    x={
+                        rect.x + 1
+                    }
+                    y={
+                        rect.y + 1
+                    }
+                    width={
+                        Math.max(
+                            0,
+                            rect.width - 2
+                        )
+                    }
+                    height={
+                        Math.max(
+                            0,
+                            rect.height - 2
+                        )
+                    }
+                />
+
+                <g
+                    className="layout-cell-selection-handles"
+                    pointerEvents="all"
+                >
+                    {handles.map(
+                        (
+                            handle
+                        ) => (
+                            <circle
+                                key={
+                                    handle.name
+                                }
+                                className={
+                                    `layout-cell-selection-handle ` +
+                                    `layout-cell-selection-handle-${handle.name.toLowerCase()}`
+                                }
+                                cx={
+                                    handle.x
+                                }
+                                cy={
+                                    handle.y
+                                }
+                                r={
+                                    SELECTION_HANDLE_RADIUS
+                                }
+                                onPointerDown={(
+                                    event
+                                ) =>
+                                    startSelectionHandleDrag(
+                                        event,
+                                        handle
+                                    )
+                                }
+                                onPointerMove={
+                                    handleSelectionPointerMove
+                                }
+                                onPointerUp={
+                                    handleSelectionPointerUp
+                                }
+                                onPointerCancel={
+                                    handleSelectionPointerUp
+                                }
+                            />
+                        )
+                    )}
+                </g>
+            </g>
+        );
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * ZEICHEN-/STROKE-FUNKTIONEN
+     * ---------------------------------------------------------
+     */
 
     function getCellsBetween(
         start,
@@ -617,44 +1337,66 @@ export function LayoutGrid({
         });
     }
 
-        function handleDoubleClick(
-            event
-        ) {
-            if (!editMode) {
-                return;
-            }
+    /*
+     * ---------------------------------------------------------
+     * DOPPELKLICK
+     * ---------------------------------------------------------
+     */
 
-            const cell =
-                getCellFromPointer(
-                    event
-                );
-
-            if (!cell) {
-                return;
-            }
-
-            const layoutCell =
-                findCell(cell);
-
-            if (
-                !layoutCell ||
-                layoutCell.elementType !==
-                    LayoutElementType.TURNOUT
-            ) {
-                return;
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            if (
-                onTurnoutDoubleClick
-            ) {
-                onTurnoutDoubleClick(
-                    layoutCell
-                );
-            }
+    function handleDoubleClick(
+        event
+    ) {
+        if (!editMode) {
+            return;
         }
+
+        /*
+         * Auswahlwerkzeug darf keinen
+         * Weichen-Dialog öffnen.
+         */
+        if (
+            tool === Tool.NONE
+        ) {
+            return;
+        }
+
+        const cell =
+            getCellFromPointer(
+                event
+            );
+
+        if (!cell) {
+            return;
+        }
+
+        const layoutCell =
+            findCell(cell);
+
+        if (
+            !layoutCell ||
+            layoutCell.elementType !==
+                LayoutElementType.TURNOUT
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (
+            onTurnoutDoubleClick
+        ) {
+            onTurnoutDoubleClick(
+                layoutCell
+            );
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * POINTER DOWN
+     * ---------------------------------------------------------
+     */
 
     function handlePointerDown(
         event
@@ -675,9 +1417,8 @@ export function LayoutGrid({
          * ==========================
          * BETRIEBSMODUS
          * ==========================
-         *
-         * Nur Weichen reagieren.
          */
+
         if (!editMode) {
             if (
                 layoutCell?.elementType ===
@@ -693,7 +1434,26 @@ export function LayoutGrid({
 
         /*
          * ==========================
-         * EDITIERMODUS
+         * AUSWAHLWERKZEUG
+         * ==========================
+         *
+         * Tool.NONE ist das
+         * Auswahlwerkzeug.
+         */
+
+        if (
+            tool === Tool.NONE
+        ) {
+            createSingleCellSelection(
+                cell
+            );
+
+            return;
+        }
+
+        /*
+         * ==========================
+         * NORMALE ELEMENT-WERKZEUGE
          * ==========================
          */
 
@@ -757,10 +1517,30 @@ export function LayoutGrid({
         });
     }
 
+    /*
+     * ---------------------------------------------------------
+     * POINTER MOVE
+     * ---------------------------------------------------------
+     */
+
     function handlePointerMove(
         event
     ) {
         if (!editMode) {
+            return;
+        }
+
+        /*
+         * Auswahl-Griff bewegen.
+         */
+        if (
+            selectionDragRef.current
+                .active
+        ) {
+            updateSelectionFromHandle(
+                event
+            );
+
             return;
         }
 
@@ -817,6 +1597,12 @@ export function LayoutGrid({
         state.lastCell =
             cell;
     }
+
+    /*
+     * ---------------------------------------------------------
+     * POINTER UP
+     * ---------------------------------------------------------
+     */
 
     function finishPointerStroke(
         event
@@ -879,6 +1665,17 @@ export function LayoutGrid({
     function handlePointerUp(
         event
     ) {
+        if (
+            selectionDragRef.current
+                .active
+        ) {
+            finishSelectionHandleDrag(
+                event
+            );
+
+            return;
+        }
+
         finishPointerStroke(
             event
         );
@@ -887,10 +1684,27 @@ export function LayoutGrid({
     function handlePointerCancel(
         event
     ) {
+        if (
+            selectionDragRef.current
+                .active
+        ) {
+            finishSelectionHandleDrag(
+                event
+            );
+
+            return;
+        }
+
         finishPointerStroke(
             event
         );
     }
+
+    /*
+     * ---------------------------------------------------------
+     * VORSCHAU
+     * ---------------------------------------------------------
+     */
 
     function renderPreview() {
         if (
@@ -953,6 +1767,12 @@ export function LayoutGrid({
             </g>
         );
     }
+
+    /*
+     * ---------------------------------------------------------
+     * RENDER
+     * ---------------------------------------------------------
+     */
 
     return (
         <div
@@ -1061,6 +1881,7 @@ export function LayoutGrid({
                             <TrackElementRenderer
                                 cell={{
                                     ...cell,
+
                                     turnoutState:
                                         getTurnoutState(
                                             cell
@@ -1075,6 +1896,8 @@ export function LayoutGrid({
                 )}
 
                 {renderPreview()}
+
+                {renderSelection()}
             </svg>
         </div>
     );

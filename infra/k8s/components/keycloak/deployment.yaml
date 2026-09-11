@@ -37,13 +37,13 @@ spec:
               value: postgres
 
             - name: KC_DB_URL
-              value: jdbc:postgresql://postgres:5432/canteen
+              value: jdbc:postgresql://postgres:5432/railsuite
 
             - name: KC_DB_SCHEMA
               value: keycloak
 
             - name: KC_DB_USERNAME
-              value: canteen_user
+              value: railsuite_user
 
             - name: KC_DB_PASSWORD
               value: secret

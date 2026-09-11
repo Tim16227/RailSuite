@@ -1,3 +1,3 @@
 CREATE SCHEMA IF NOT EXISTS keycloak;
 
-GRANT ALL PRIVILEGES ON SCHEMA keycloak TO canteen_user;
+GRANT ALL PRIVILEGES ON SCHEMA keycloak TO railsuite_user;

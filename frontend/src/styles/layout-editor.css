@@ -12,7 +12,7 @@
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid #d0d0d0;
-  background: #6d6d6d;
+  background: #f5f5f5;
 }
 
 .toolbar-group {
@@ -26,7 +26,7 @@
   height: 40px;
   border: 1px solid #c8c8c8;
   border-radius: 6px;
-  background: #454545;
+  background: #fff;
   cursor: pointer;
   font-size: 20px;
   transition:
@@ -50,22 +50,14 @@
   width: 1px;
   height: 32px;
   margin: 0 4px;
-  background: #4d4d4d;
+  background: #c8c8c8;
 }
 
 .layout-editor-canvas {
-  position: relative;
-
   flex: 1;
-
-  min-width: 0;
-  min-height: 0;
-
   overflow: auto;
-
   padding: 20px;
-
-  background: #6d6d6d;
+  background: #e8e8e8;
 }
 
 .layout-grid {
@@ -77,19 +69,16 @@
   position: absolute;
   top: 0;
   left: 0;
-
   display: grid;
-
-  background: #818181;
 }
 
 .layout-cell-background {
   box-sizing: border-box;
 
-  border-right: 1px solid #a8a8a8;
-  border-bottom: 1px solid #a8a8a8;
+  border-right: 1px solid #d4d4d4;
+  border-bottom: 1px solid #d4d4d4;
 
-  background: #818181;
+  background: #f4f4f4;
 }
 
 .layout-track-layer {
@@ -101,6 +90,8 @@
   display: block;
 
   touch-action: none;
+
+  cursor: crosshair;
 }
 
 .layout-track-preview {
@@ -129,6 +120,100 @@
 
   pointer-events: none;
 }
+
+/*
+ * ---------------------------------------------------------
+ * ZELLENAUSWAHL
+ * ---------------------------------------------------------
+ *
+ * Schwarzer Rahmen wie bei einer klassischen
+ * Stellwerks-/Layout-Software.
+ */
+
+.layout-cell-selection {
+  pointer-events: none;
+}
+
+.layout-cell-selection-border {
+  fill: none;
+
+  stroke: #000000;
+
+  stroke-width: 2;
+
+  vector-effect: non-scaling-stroke;
+
+  pointer-events: none;
+
+  shape-rendering: crispEdges;
+}
+
+/*
+ * ---------------------------------------------------------
+ * AUSWAHL-GRIFFE
+ * ---------------------------------------------------------
+ *
+ * Acht kleine schwarze Punkte:
+ *
+ *   ●────●────●
+ *   │         │
+ *   ●         ●
+ *   │         │
+ *   ●────●────●
+ */
+
+.layout-cell-selection-handles {
+  pointer-events: all;
+}
+
+.layout-cell-selection-handle {
+  fill: #000000;
+
+  stroke: #000000;
+
+  stroke-width: 1;
+
+  vector-effect: non-scaling-stroke;
+
+  pointer-events: all;
+
+  cursor: crosshair;
+}
+
+/*
+ * ---------------------------------------------------------
+ * CURSOR DER EINZELNEN GRIFFE
+ * ---------------------------------------------------------
+ *
+ * Dadurch erkennt man beim Überfahren,
+ * in welche Richtung der Griff gezogen werden kann.
+ */
+
+.layout-cell-selection-handle-top-left,
+.layout-cell-selection-handle-bottom-right {
+  cursor: nwse-resize;
+}
+
+.layout-cell-selection-handle-top-right,
+.layout-cell-selection-handle-bottom-left {
+  cursor: nesw-resize;
+}
+
+.layout-cell-selection-handle-top,
+.layout-cell-selection-handle-bottom {
+  cursor: ns-resize;
+}
+
+.layout-cell-selection-handle-left,
+.layout-cell-selection-handle-right {
+  cursor: ew-resize;
+}
+
+/*
+ * ---------------------------------------------------------
+ * WEICHENSTELLUNGS-ANZEIGE
+ * ---------------------------------------------------------
+ */
 
 .turnout-position-indicator {
   fill: #ffffff;
