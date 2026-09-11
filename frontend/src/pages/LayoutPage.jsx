@@ -16,19 +16,29 @@ import {
     BlockEditor,
 } from "../components/layout/BlockEditor";
 
+import {
+    PropertiesEditor,
+} from "../components/layout/PropertiesEditor";
+
 export default function LayoutPage({
     tool,
     setTool,
     editMode,
 }) {
-    const [layout, setLayout] =
-        useState(null);
+    const [
+        layout,
+        setLayout,
+    ] = useState(null);
 
-    const [loading, setLoading] =
-        useState(true);
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
 
-    const [error, setError] =
-        useState(null);
+    const [
+        error,
+        setError,
+    ] = useState(null);
 
     useEffect(() => {
         loadLayout();
@@ -66,7 +76,9 @@ export default function LayoutPage({
                 newLayout
             );
         } catch (error) {
-            console.error(error);
+            console.error(
+                error
+            );
 
             setError(
                 "Das Layout konnte nicht geladen werden."
@@ -116,6 +128,14 @@ export default function LayoutPage({
             />
 
             <BlockEditor
+                layout={layout}
+                tool={tool}
+                editMode={
+                    editMode
+                }
+            />
+
+            <PropertiesEditor
                 layout={layout}
                 tool={tool}
                 editMode={

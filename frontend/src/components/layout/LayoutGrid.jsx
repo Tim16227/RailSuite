@@ -19,8 +19,7 @@ import {
 import "../../styles/layout-editor.css";
 
 const CELL_SIZE = 40;
-
-const SELECTION_HANDLE_RADIUS = 4;
+const HANDLE_RADIUS = 4;
 
 export function LayoutGrid({
     layout,
@@ -28,7 +27,8 @@ export function LayoutGrid({
     editMode,
     onStrokeComplete,
     onCellAction,
-    onTurnoutDoubleClick,
+    onCellProperties,
+    onMoveSelection,
 }) {
     const svgRef =
         useRef(null);
@@ -48,46 +48,16 @@ export function LayoutGrid({
         setSwitchingTurnout,
     ] = useState(null);
 
-    /*
-     * ---------------------------------------------------------
-     * AUSWAHL
-     * ---------------------------------------------------------
-     *
-     * Die Auswahl wird als Zellbereich gespeichert.
-     *
-     * Beispiel:
-     *
-     * {
-     *     minX: 2,
-     *     minY: 3,
-     *     maxX: 6,
-     *     maxY: 7
-     * }
-     *
-     * Damit können wir später sehr einfach
-     * mehrere Zellen gemeinsam bearbeiten.
-     */
-
     const [
         selectedRange,
         setSelectedRange,
     ] = useState(null);
 
-    /*
-     * Zustand für das Ziehen eines
-     * Auswahl-Griffes.
-     */
-    const selectionDragRef =
-        useRef({
-            active: false,
-            pointerId: null,
-            handle: null,
-            anchor: null,
-        });
+    const [
+        movePreview,
+        setMovePreview,
+    ] = useState(null);
 
-    /*
-     * Zustand für die normalen Zeichenwerkzeuge.
-     */
     const pointerStateRef =
         useRef({
             active: false,
@@ -97,15 +67,26 @@ export function LayoutGrid({
             startPixel: null,
         });
 
+    const selectionDragRef =
+        useRef({
+            active: false,
+            pointerId: null,
+            handle: null,
+            anchor: null,
+        });
+
+    const moveDragRef =
+        useRef({
+            active: false,
+            pointerId: null,
+            startCell: null,
+            lastDeltaX: 0,
+            lastDeltaY: 0,
+        });
+
     if (!layout) {
         return null;
     }
-
-    /*
-     * ---------------------------------------------------------
-     * ZELLENPOSITION
-     * ---------------------------------------------------------
-     */
 
     function getCellFromPointer(
         event
@@ -167,12 +148,6 @@ export function LayoutGrid({
         );
     }
 
-    /*
-     * ---------------------------------------------------------
-     * WEICHEN
-     * ---------------------------------------------------------
-     */
-
     function getTurnoutState(
         cell
     ) {
@@ -201,10 +176,6 @@ export function LayoutGrid({
             return;
         }
 
-        /*
-         * Bereits laufenden Stellvorgang
-         * nicht doppelt auslösen.
-         */
         if (
             switchingTurnout ===
             cell.id
@@ -223,14 +194,11 @@ export function LayoutGrid({
                 ? "RIGHT"
                 : "LEFT";
 
-        /*
-         * Ohne digitale Zuordnung kann
-         * das Backend die Weiche nicht
-         * stellen.
-         */
         if (
-            cell.digitalSystem == null ||
-            cell.digitalAddress == null
+            cell.digitalSystem ==
+                null ||
+            cell.digitalAddress ==
+                null
         ) {
             console.warn(
                 "Weiche besitzt keine digitale Zuordnung:",
@@ -277,7 +245,33 @@ export function LayoutGrid({
      * ---------------------------------------------------------
      */
 
-    function createSingleCellSelection(
+    function normalizeRange(
+        range
+    ) {
+        return {
+            minX: Math.min(
+                range.minX,
+                range.maxX
+            ),
+
+            minY: Math.min(
+                range.minY,
+                range.maxY
+            ),
+
+            maxX: Math.max(
+                range.minX,
+                range.maxX
+            ),
+
+            maxY: Math.max(
+                range.minY,
+                range.maxY
+            ),
+        };
+    }
+
+    function selectCell(
         cell
     ) {
         if (!cell) {
@@ -292,93 +286,66 @@ export function LayoutGrid({
         });
     }
 
-    function clamp(
-        value,
-        min,
-        max
+    function isCellSelected(
+        cell
     ) {
-        return Math.max(
-            min,
-            Math.min(
-                max,
-                value
-            )
+        if (!selectedRange) {
+            return false;
+        }
+
+        const range =
+            normalizeRange(
+                selectedRange
+            );
+
+        return (
+            cell.x >= range.minX &&
+            cell.x <= range.maxX &&
+            cell.y >= range.minY &&
+            cell.y <= range.maxY
         );
     }
 
-    function getSelectionBounds() {
+    function getSelectionRect() {
         if (!selectedRange) {
             return null;
         }
 
-        return {
-            minX: Math.min(
-                selectedRange.minX,
-                selectedRange.maxX
-            ),
-
-            minY: Math.min(
-                selectedRange.minY,
-                selectedRange.maxY
-            ),
-
-            maxX: Math.max(
-                selectedRange.minX,
-                selectedRange.maxX
-            ),
-
-            maxY: Math.max(
-                selectedRange.minY,
-                selectedRange.maxY
-            ),
-        };
-    }
-
-    function getSelectionPixelRect() {
-        const bounds =
-            getSelectionBounds();
-
-        if (!bounds) {
-            return null;
-        }
+        const range =
+            normalizeRange(
+                selectedRange
+            );
 
         return {
             x:
-                bounds.minX *
+                range.minX *
                 CELL_SIZE,
 
             y:
-                bounds.minY *
+                range.minY *
                 CELL_SIZE,
 
             width:
                 (
-                    bounds.maxX -
-                    bounds.minX +
+                    range.maxX -
+                    range.minX +
                     1
                 ) *
                 CELL_SIZE,
 
             height:
                 (
-                    bounds.maxY -
-                    bounds.minY +
+                    range.maxY -
+                    range.minY +
                     1
                 ) *
                 CELL_SIZE,
         };
     }
 
-    /*
-     * Positionen der acht Griffe.
-     *
-     * Die Namen sind bewusst eindeutig,
-     * damit die Berechnung beim Ziehen
-     * einfach bleibt.
-     */
     function getSelectionHandles() {
         const rect =
-            getSelectionPixelRect();
+            getSelectionRect();
 
         if (!rect) {
             return [];
@@ -408,49 +375,42 @@ export function LayoutGrid({
 
         return [
             {
-                name: "TOP_LEFT",
+                id: "TOP_LEFT",
                 x: left,
                 y: top,
             },
-
             {
-                name: "TOP",
+                id: "TOP",
                 x: centerX,
                 y: top,
             },
-
             {
-                name: "TOP_RIGHT",
+                id: "TOP_RIGHT",
                 x: right,
                 y: top,
             },
-
             {
-                name: "RIGHT",
+                id: "RIGHT",
                 x: right,
                 y: centerY,
             },
-
             {
-                name: "BOTTOM_RIGHT",
+                id: "BOTTOM_RIGHT",
                 x: right,
                 y: bottom,
             },
-
             {
-                name: "BOTTOM",
+                id: "BOTTOM",
                 x: centerX,
                 y: bottom,
             },
-
             {
-                name: "BOTTOM_LEFT",
+                id: "BOTTOM_LEFT",
                 x: left,
                 y: bottom,
             },
-
             {
-                name: "LEFT",
+                id: "LEFT",
                 x: left,
                 y: centerY,
             },
@@ -462,8 +422,7 @@ export function LayoutGrid({
         handle
     ) {
         if (
-            !editMode ||
-            tool !== Tool.NONE ||
+            tool !== null ||
             !selectedRange
         ) {
             return;
@@ -472,72 +431,66 @@ export function LayoutGrid({
         event.preventDefault();
         event.stopPropagation();
 
-        const bounds =
-            getSelectionBounds();
+        const range =
+            normalizeRange(
+                selectedRange
+            );
 
-        if (!bounds) {
-            return;
-        }
-
-        /*
-         * Der gegenüberliegende Punkt bleibt
-         * beim Ziehen fixiert.
-         */
         let anchor;
 
-        switch (handle.name) {
+        switch (handle.id) {
             case "TOP_LEFT":
                 anchor = {
-                    x: bounds.maxX,
-                    y: bounds.maxY,
+                    x: range.maxX,
+                    y: range.maxY,
                 };
                 break;
 
             case "TOP":
                 anchor = {
                     x: null,
-                    y: bounds.maxY,
+                    y: range.maxY,
                 };
                 break;
 
             case "TOP_RIGHT":
                 anchor = {
-                    x: bounds.minX,
-                    y: bounds.maxY,
+                    x: range.minX,
+                    y: range.maxY,
                 };
                 break;
 
             case "RIGHT":
                 anchor = {
-                    x: bounds.minX,
+                    x: range.minX,
                     y: null,
                 };
                 break;
 
             case "BOTTOM_RIGHT":
                 anchor = {
-                    x: bounds.minX,
-                    y: bounds.minY,
+                    x: range.minX,
+                    y: range.minY,
                 };
                 break;
 
             case "BOTTOM":
                 anchor = {
                     x: null,
-                    y: bounds.minY,
+                    y: range.minY,
                 };
                 break;
 
             case "BOTTOM_LEFT":
                 anchor = {
-                    x: bounds.maxX,
-                    y: bounds.minY,
+                    x: range.maxX,
+                    y: range.minY,
                 };
                 break;
 
             case "LEFT":
                 anchor = {
-                    x: bounds.maxX,
+                    x: range.maxX,
                     y: null,
                 };
                 break;
@@ -551,7 +504,7 @@ export function LayoutGrid({
             pointerId:
                 event.pointerId,
             handle:
-                handle.name,
+                handle.id,
             anchor,
         };
 
@@ -560,15 +513,15 @@ export function LayoutGrid({
         );
     }
 
-    function updateSelectionFromHandle(
+    function updateSelectionHandle(
         event
     ) {
-        const state =
+        const drag =
             selectionDragRef.current;
 
         if (
-            !state.active ||
-            state.pointerId !==
+            !drag.active ||
+            drag.pointerId !==
                 event.pointerId
         ) {
             return;
@@ -584,30 +537,27 @@ export function LayoutGrid({
         }
 
         const anchor =
-            state.anchor;
+            drag.anchor;
 
         let minX;
         let maxX;
         let minY;
         let maxY;
 
-        switch (state.handle) {
+        switch (drag.handle) {
             case "TOP_LEFT":
                 minX = Math.min(
                     cell.x,
                     anchor.x
                 );
-
                 maxX = Math.max(
                     cell.x,
                     anchor.x
                 );
-
                 minY = Math.min(
                     cell.y,
                     anchor.y
                 );
-
                 maxY = Math.max(
                     cell.y,
                     anchor.y
@@ -617,15 +567,12 @@ export function LayoutGrid({
             case "TOP":
                 minX =
                     selectedRange.minX;
-
                 maxX =
                     selectedRange.maxX;
-
                 minY = Math.min(
                     cell.y,
                     anchor.y
                 );
-
                 maxY = Math.max(
                     cell.y,
                     anchor.y
@@ -637,17 +584,14 @@ export function LayoutGrid({
                     cell.x,
                     anchor.x
                 );
-
                 maxX = Math.max(
                     cell.x,
                     anchor.x
                 );
-
                 minY = Math.min(
                     cell.y,
                     anchor.y
                 );
-
                 maxY = Math.max(
                     cell.y,
                     anchor.y
@@ -659,15 +603,12 @@ export function LayoutGrid({
                     cell.x,
                     anchor.x
                 );
-
                 maxX = Math.max(
                     cell.x,
                     anchor.x
                 );
-
                 minY =
                     selectedRange.minY;
-
                 maxY =
                     selectedRange.maxY;
                 break;
@@ -677,17 +618,14 @@ export function LayoutGrid({
                     cell.x,
                     anchor.x
                 );
-
                 maxX = Math.max(
                     cell.x,
                     anchor.x
                 );
-
                 minY = Math.min(
                     cell.y,
                     anchor.y
                 );
-
                 maxY = Math.max(
                     cell.y,
                     anchor.y
@@ -697,15 +635,12 @@ export function LayoutGrid({
             case "BOTTOM":
                 minX =
                     selectedRange.minX;
-
                 maxX =
                     selectedRange.maxX;
-
                 minY = Math.min(
                     cell.y,
                     anchor.y
                 );
-
                 maxY = Math.max(
                     cell.y,
                     anchor.y
@@ -717,17 +652,14 @@ export function LayoutGrid({
                     cell.x,
                     anchor.x
                 );
-
                 maxX = Math.max(
                     cell.x,
                     anchor.x
                 );
-
                 minY = Math.min(
                     cell.y,
                     anchor.y
                 );
-
                 maxY = Math.max(
                     cell.y,
                     anchor.y
@@ -739,15 +671,12 @@ export function LayoutGrid({
                     cell.x,
                     anchor.x
                 );
-
                 maxX = Math.max(
                     cell.x,
                     anchor.x
                 );
-
                 minY =
                     selectedRange.minY;
-
                 maxY =
                     selectedRange.maxY;
                 break;
@@ -756,47 +685,47 @@ export function LayoutGrid({
                 return;
         }
 
-        minX = clamp(
-            minX,
-            0,
-            layout.width - 1
-        );
-
-        maxX = clamp(
-            maxX,
-            0,
-            layout.width - 1
-        );
-
-        minY = clamp(
-            minY,
-            0,
-            layout.height - 1
-        );
-
-        maxY = clamp(
-            maxY,
-            0,
-            layout.height - 1
-        );
-
         setSelectedRange({
-            minX,
-            minY,
-            maxX,
-            maxY,
+            minX: Math.max(
+                0,
+                Math.min(
+                    layout.width - 1,
+                    minX
+                )
+            ),
+            minY: Math.max(
+                0,
+                Math.min(
+                    layout.height - 1,
+                    minY
+                )
+            ),
+            maxX: Math.max(
+                0,
+                Math.min(
+                    layout.width - 1,
+                    maxX
+                )
+            ),
+            maxY: Math.max(
+                0,
+                Math.min(
+                    layout.height - 1,
+                    maxY
+                )
+            ),
         });
     }
 
     function finishSelectionHandleDrag(
         event
     ) {
-        const state =
+        const drag =
             selectionDragRef.current;
 
         if (
-            !state.active ||
-            state.pointerId !==
+            !drag.active ||
+            drag.pointerId !==
                 event.pointerId
         ) {
             return;
@@ -820,128 +749,218 @@ export function LayoutGrid({
         }
     }
 
-    function handleSelectionPointerMove(
-        event
+    /*
+     * ---------------------------------------------------------
+     * VERSCHIEBEN
+     * ---------------------------------------------------------
+     */
+
+    function startMove(
+        event,
+        cell
     ) {
         if (
-            !selectionDragRef.current
-                .active
+            tool !== Tool.MOVE ||
+            !selectedRange ||
+            !isCellSelected(cell)
+        ) {
+            return false;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        moveDragRef.current = {
+            active: true,
+            pointerId:
+                event.pointerId,
+            startCell: cell,
+            lastDeltaX: 0,
+            lastDeltaY: 0,
+        };
+
+        setMovePreview({
+            deltaX: 0,
+            deltaY: 0,
+        });
+
+        event.currentTarget.setPointerCapture(
+            event.pointerId
+        );
+
+        return true;
+    }
+
+    function updateMove(
+        event
+    ) {
+        const drag =
+            moveDragRef.current;
+
+        if (
+            !drag.active ||
+            drag.pointerId !==
+                event.pointerId
         ) {
             return;
         }
 
-        updateSelectionFromHandle(
-            event
-        );
+        const cell =
+            getCellFromPointer(
+                event
+            );
+
+        if (!cell) {
+            return;
+        }
+
+        const deltaX =
+            cell.x -
+            drag.startCell.x;
+
+        const deltaY =
+            cell.y -
+            drag.startCell.y;
+
+        const range =
+            normalizeRange(
+                selectedRange
+            );
+
+        const maxDeltaX =
+            layout.width -
+            1 -
+            range.maxX;
+
+        const minDeltaX =
+            -range.minX;
+
+        const maxDeltaY =
+            layout.height -
+            1 -
+            range.maxY;
+
+        const minDeltaY =
+            -range.minY;
+
+        const boundedDeltaX =
+            Math.max(
+                minDeltaX,
+                Math.min(
+                    maxDeltaX,
+                    deltaX
+                )
+            );
+
+        const boundedDeltaY =
+            Math.max(
+                minDeltaY,
+                Math.min(
+                    maxDeltaY,
+                    deltaY
+                )
+            );
+
+        drag.lastDeltaX =
+            boundedDeltaX;
+
+        drag.lastDeltaY =
+            boundedDeltaY;
+
+        setMovePreview({
+            deltaX:
+                boundedDeltaX,
+            deltaY:
+                boundedDeltaY,
+        });
     }
 
-    function handleSelectionPointerUp(
+    async function finishMove(
         event
     ) {
-        finishSelectionHandleDrag(
-            event
-        );
-    }
+        const drag =
+            moveDragRef.current;
 
-    function renderSelection() {
         if (
-            !editMode ||
-            tool !== Tool.NONE ||
-            !selectedRange
+            !drag.active ||
+            drag.pointerId !==
+                event.pointerId
         ) {
-            return null;
+            return;
         }
 
-        const rect =
-            getSelectionPixelRect();
+        moveDragRef.current = {
+            active: false,
+            pointerId: null,
+            startCell: null,
+            lastDeltaX: 0,
+            lastDeltaY: 0,
+        };
 
-        if (!rect) {
-            return null;
-        }
+        const deltaX =
+            drag.lastDeltaX;
 
-        const handles =
-            getSelectionHandles();
+        const deltaY =
+            drag.lastDeltaY;
 
-        return (
-            <g
-                className="layout-cell-selection"
-                pointerEvents="none"
-            >
-                <rect
-                    className="layout-cell-selection-border"
-                    x={
-                        rect.x + 1
-                    }
-                    y={
-                        rect.y + 1
-                    }
-                    width={
-                        Math.max(
-                            0,
-                            rect.width - 2
-                        )
-                    }
-                    height={
-                        Math.max(
-                            0,
-                            rect.height - 2
-                        )
-                    }
-                />
-
-                <g
-                    className="layout-cell-selection-handles"
-                    pointerEvents="all"
-                >
-                    {handles.map(
-                        (
-                            handle
-                        ) => (
-                            <circle
-                                key={
-                                    handle.name
-                                }
-                                className={
-                                    `layout-cell-selection-handle ` +
-                                    `layout-cell-selection-handle-${handle.name.toLowerCase()}`
-                                }
-                                cx={
-                                    handle.x
-                                }
-                                cy={
-                                    handle.y
-                                }
-                                r={
-                                    SELECTION_HANDLE_RADIUS
-                                }
-                                onPointerDown={(
-                                    event
-                                ) =>
-                                    startSelectionHandleDrag(
-                                        event,
-                                        handle
-                                    )
-                                }
-                                onPointerMove={
-                                    handleSelectionPointerMove
-                                }
-                                onPointerUp={
-                                    handleSelectionPointerUp
-                                }
-                                onPointerCancel={
-                                    handleSelectionPointerUp
-                                }
-                            />
-                        )
-                    )}
-                </g>
-            </g>
+        setMovePreview(
+            null
         );
+
+        if (
+            event.currentTarget.hasPointerCapture(
+                event.pointerId
+            )
+        ) {
+            event.currentTarget.releasePointerCapture(
+                event.pointerId
+            );
+        }
+
+        if (
+            deltaX === 0 &&
+            deltaY === 0
+        ) {
+            return;
+        }
+
+        const range =
+            normalizeRange(
+                selectedRange
+            );
+
+        if (
+            onMoveSelection
+        ) {
+            await onMoveSelection(
+                range,
+                deltaX,
+                deltaY
+            );
+        }
+
+        setSelectedRange({
+            minX:
+                range.minX +
+                deltaX,
+
+            minY:
+                range.minY +
+                deltaY,
+
+            maxX:
+                range.maxX +
+                deltaX,
+
+            maxY:
+                range.maxY +
+                deltaY,
+        });
     }
 
     /*
      * ---------------------------------------------------------
-     * ZEICHEN-/STROKE-FUNKTIONEN
+     * STROKE
      * ---------------------------------------------------------
      */
 
@@ -964,189 +983,43 @@ export function LayoutGrid({
             end.y -
             start.y;
 
+        const distance =
+            Math.max(
+                Math.abs(dx),
+                Math.abs(dy)
+            );
+
         if (
-            dx === 0 &&
-            dy === 0
+            distance === 0
         ) {
             return [
-                {
-                    ...start,
-                },
+                start,
             ];
         }
-
-        const absDx =
-            Math.abs(dx);
-
-        const absDy =
-            Math.abs(dy);
-
-        if (
-            absDx === absDy &&
-            absDx > 0
-        ) {
-            const stepX =
-                dx > 0
-                    ? 1
-                    : -1;
-
-            const stepY =
-                dy > 0
-                    ? 1
-                    : -1;
-
-            const cells = [];
-
-            for (
-                let i = 0;
-                i <= absDx;
-                i++
-            ) {
-                cells.push({
-                    x:
-                        start.x +
-                        stepX * i,
-
-                    y:
-                        start.y +
-                        stepY * i,
-                });
-            }
-
-            return cells;
-        }
-
-        if (dy === 0) {
-            const stepX =
-                dx > 0
-                    ? 1
-                    : -1;
-
-            const cells = [];
-
-            for (
-                let i = 0;
-                i <= absDx;
-                i++
-            ) {
-                cells.push({
-                    x:
-                        start.x +
-                        stepX * i,
-
-                    y:
-                        start.y,
-                });
-            }
-
-            return cells;
-        }
-
-        if (dx === 0) {
-            const stepY =
-                dy > 0
-                    ? 1
-                    : -1;
-
-            const cells = [];
-
-            for (
-                let i = 0;
-                i <= absDy;
-                i++
-            ) {
-                cells.push({
-                    x:
-                        start.x,
-
-                    y:
-                        start.y +
-                        stepY * i,
-                });
-            }
-
-            return cells;
-        }
-
-        if (
-            absDx > absDy
-        ) {
-            const stepX =
-                dx > 0
-                    ? 1
-                    : -1;
-
-            const cells = [];
-
-            for (
-                let i = 0;
-                i <= absDx;
-                i++
-            ) {
-                const progress =
-                    absDx === 0
-                        ? 0
-                        : i /
-                          absDx;
-
-                const interpolatedY =
-                    start.y +
-                    dy *
-                        progress;
-
-                const y =
-                    Math.round(
-                        interpolatedY
-                    );
-
-                cells.push({
-                    x:
-                        start.x +
-                        stepX * i,
-
-                    y,
-                });
-            }
-
-            return removeDuplicateCells(
-                cells
-            );
-        }
-
-        const stepY =
-            dy > 0
-                ? 1
-                : -1;
 
         const cells = [];
 
         for (
-            let i = 0;
-            i <= absDy;
-            i++
+            let index = 0;
+            index <= distance;
+            index++
         ) {
             const progress =
-                absDy === 0
-                    ? 0
-                    : i /
-                      absDy;
-
-            const interpolatedX =
-                start.x +
-                dx *
-                    progress;
-
-            const x =
-                Math.round(
-                    interpolatedX
-                );
+                index /
+                distance;
 
             cells.push({
-                x,
+                x: Math.round(
+                    start.x +
+                        dx *
+                            progress
+                ),
 
-                y:
+                y: Math.round(
                     start.y +
-                    stepY * i,
+                        dy *
+                            progress
+                ),
             });
         }
 
@@ -1165,16 +1038,13 @@ export function LayoutGrid({
         ) {
             const last =
                 result[
-                    result.length -
-                        1
+                    result.length - 1
                 ];
 
             if (
                 !last ||
-                last.x !==
-                    cell.x ||
-                last.y !==
-                    cell.y
+                last.x !== cell.x ||
+                last.y !== cell.y
             ) {
                 result.push(
                     cell
@@ -1213,10 +1083,8 @@ export function LayoutGrid({
 
             if (
                 last &&
-                last.x ===
-                    cell.x &&
-                last.y ===
-                    cell.y
+                last.x === cell.x &&
+                last.y === cell.y
             ) {
                 continue;
             }
@@ -1322,7 +1190,7 @@ export function LayoutGrid({
                 rect.top,
         };
 
-        const snappedEnd =
+        const end =
             getSnappedPreviewEnd(
                 state.startPixel,
                 currentPixel
@@ -1331,65 +1199,8 @@ export function LayoutGrid({
         setPreviewLine({
             start:
                 state.startPixel,
-
-            end:
-                snappedEnd,
+            end,
         });
-    }
-
-    /*
-     * ---------------------------------------------------------
-     * DOPPELKLICK
-     * ---------------------------------------------------------
-     */
-
-    function handleDoubleClick(
-        event
-    ) {
-        if (!editMode) {
-            return;
-        }
-
-        /*
-         * Auswahlwerkzeug darf keinen
-         * Weichen-Dialog öffnen.
-         */
-        if (
-            tool === Tool.NONE
-        ) {
-            return;
-        }
-
-        const cell =
-            getCellFromPointer(
-                event
-            );
-
-        if (!cell) {
-            return;
-        }
-
-        const layoutCell =
-            findCell(cell);
-
-        if (
-            !layoutCell ||
-            layoutCell.elementType !==
-                LayoutElementType.TURNOUT
-        ) {
-            return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (
-            onTurnoutDoubleClick
-        ) {
-            onTurnoutDoubleClick(
-                layoutCell
-            );
-        }
     }
 
     /*
@@ -1414,11 +1225,9 @@ export function LayoutGrid({
             findCell(cell);
 
         /*
-         * ==========================
-         * BETRIEBSMODUS
-         * ==========================
+         * Betriebsmodus:
+         * ausschließlich Weichen.
          */
-
         if (!editMode) {
             if (
                 layoutCell?.elementType ===
@@ -1433,18 +1242,30 @@ export function LayoutGrid({
         }
 
         /*
-         * ==========================
-         * AUSWAHLWERKZEUG
-         * ==========================
-         *
-         * Tool.NONE ist das
-         * Auswahlwerkzeug.
+         * Eigenschaften.
          */
-
         if (
-            tool === Tool.NONE
+            tool === Tool.PROPERTIES
         ) {
-            createSingleCellSelection(
+            if (
+                onCellProperties
+            ) {
+                onCellProperties(
+                    layoutCell
+                );
+            }
+
+            return;
+        }
+
+        /*
+         * Verschieben.
+         */
+        if (
+            tool === Tool.MOVE
+        ) {
+            startMove(
+                event,
                 cell
             );
 
@@ -1452,18 +1273,33 @@ export function LayoutGrid({
         }
 
         /*
-         * ==========================
-         * NORMALE ELEMENT-WERKZEUGE
-         * ==========================
+         * Kein Werkzeug:
+         * Zelle auswählen.
          */
+        if (
+            tool === null
+        ) {
+            selectCell(
+                cell
+            );
 
+            return;
+        }
+
+        /*
+         * Manuelle Elementwerkzeuge.
+         */
         if (
             tool !== Tool.PEN &&
             tool !== Tool.ERASER
         ) {
-            onCellAction(
-                cell
-            );
+            if (
+                onCellAction
+            ) {
+                onCellAction(
+                    cell
+                );
+            }
 
             return;
         }
@@ -1511,7 +1347,6 @@ export function LayoutGrid({
         setPreviewLine({
             start:
                 startPixel,
-
             end:
                 startPixel,
         });
@@ -1530,14 +1365,22 @@ export function LayoutGrid({
             return;
         }
 
-        /*
-         * Auswahl-Griff bewegen.
-         */
         if (
             selectionDragRef.current
                 .active
         ) {
-            updateSelectionFromHandle(
+            updateSelectionHandle(
+                event
+            );
+
+            return;
+        }
+
+        if (
+            moveDragRef.current
+                .active
+        ) {
+            updateMove(
                 event
             );
 
@@ -1576,22 +1419,17 @@ export function LayoutGrid({
 
         if (
             lastCell &&
-            lastCell.x ===
-                cell.x &&
-            lastCell.y ===
-                cell.y
+            lastCell.x === cell.x &&
+            lastCell.y === cell.y
         ) {
             return;
         }
 
-        const cells =
+        addCellsToStroke(
             getCellsBetween(
                 lastCell,
                 cell
-            );
-
-        addCellsToStroke(
-            cells
+            )
         );
 
         state.lastCell =
@@ -1604,9 +1442,31 @@ export function LayoutGrid({
      * ---------------------------------------------------------
      */
 
-    function finishPointerStroke(
+    async function handlePointerUp(
         event
     ) {
+        if (
+            selectionDragRef.current
+                .active
+        ) {
+            finishSelectionHandleDrag(
+                event
+            );
+
+            return;
+        }
+
+        if (
+            moveDragRef.current
+                .active
+        ) {
+            await finishMove(
+                event
+            );
+
+            return;
+        }
+
         const state =
             pointerStateRef.current;
 
@@ -1648,37 +1508,13 @@ export function LayoutGrid({
         }
 
         if (
-            points.length === 0
+            points.length > 0 &&
+            editMode
         ) {
-            return;
-        }
-
-        if (!editMode) {
-            return;
-        }
-
-        onStrokeComplete(
-            points
-        );
-    }
-
-    function handlePointerUp(
-        event
-    ) {
-        if (
-            selectionDragRef.current
-                .active
-        ) {
-            finishSelectionHandleDrag(
-                event
+            onStrokeComplete(
+                points
             );
-
-            return;
         }
-
-        finishPointerStroke(
-            event
-        );
     }
 
     function handlePointerCancel(
@@ -1695,16 +1531,157 @@ export function LayoutGrid({
             return;
         }
 
-        finishPointerStroke(
-            event
+        if (
+            moveDragRef.current
+                .active
+        ) {
+            moveDragRef.current = {
+                active: false,
+                pointerId: null,
+                startCell: null,
+                lastDeltaX: 0,
+                lastDeltaY: 0,
+            };
+
+            setMovePreview(
+                null
+            );
+
+            return;
+        }
+
+        pointerStateRef.current = {
+            active: false,
+            pointerId: null,
+            points: [],
+            lastCell: null,
+            startPixel: null,
+        };
+
+        setPreviewLine(
+            null
         );
     }
 
     /*
      * ---------------------------------------------------------
-     * VORSCHAU
+     * AUSWAHL RENDERN
      * ---------------------------------------------------------
      */
+
+    function renderSelection() {
+        if (
+            !editMode ||
+            !selectedRange
+        ) {
+            return null;
+        }
+
+        const rect =
+            getSelectionRect();
+
+        if (!rect) {
+            return null;
+        }
+
+        const isMoving =
+            tool === Tool.MOVE &&
+            movePreview != null;
+
+        const offsetX =
+            isMoving
+                ? movePreview.deltaX *
+                  CELL_SIZE
+                : 0;
+
+        const offsetY =
+            isMoving
+                ? movePreview.deltaY *
+                  CELL_SIZE
+                : 0;
+
+        const handles =
+            getSelectionHandles();
+
+        return (
+            <g
+                className="layout-cell-selection"
+                transform={
+                    `translate(${offsetX} ${offsetY})`
+                }
+            >
+                <rect
+                    className="layout-cell-selection-border"
+                    x={
+                        rect.x + 1
+                    }
+                    y={
+                        rect.y + 1
+                    }
+                    width={
+                        Math.max(
+                            0,
+                            rect.width - 2
+                        )
+                    }
+                    height={
+                        Math.max(
+                            0,
+                            rect.height - 2
+                        )
+                    }
+                />
+
+                {!isMoving &&
+                    tool === null && (
+                        <g>
+                            {handles.map(
+                                (
+                                    handle
+                                ) => (
+                                    <circle
+                                        key={
+                                            handle.id
+                                        }
+                                        className={
+                                            `layout-cell-selection-handle ` +
+                                            `layout-cell-selection-handle-${handle.id.toLowerCase()}`
+                                        }
+                                        cx={
+                                            handle.x
+                                        }
+                                        cy={
+                                            handle.y
+                                        }
+                                        r={
+                                            HANDLE_RADIUS
+                                        }
+                                        pointerEvents="all"
+                                        onPointerDown={(
+                                            event
+                                        ) =>
+                                            startSelectionHandleDrag(
+                                                event,
+                                                handle
+                                            )
+                                        }
+                                        onPointerMove={
+                                            updateSelectionHandle
+                                        }
+                                        onPointerUp={
+                                            finishSelectionHandleDrag
+                                        }
+                                        onPointerCancel={
+                                            finishSelectionHandleDrag
+                                        }
+                                    />
+                                )
+                            )}
+                        </g>
+                    )}
+            </g>
+        );
+    }
 
     function renderPreview() {
         if (
@@ -1722,32 +1699,26 @@ export function LayoutGrid({
                 <line
                     className="layout-track-preview-line"
                     x1={
-                        previewLine
-                            .start.x
+                        previewLine.start.x
                     }
                     y1={
-                        previewLine
-                            .start.y
+                        previewLine.start.y
                     }
                     x2={
-                        previewLine
-                            .end.x
+                        previewLine.end.x
                     }
                     y2={
-                        previewLine
-                            .end.y
+                        previewLine.end.y
                     }
                 />
 
                 <circle
                     className="layout-track-preview-point"
                     cx={
-                        previewLine
-                            .start.x
+                        previewLine.start.x
                     }
                     cy={
-                        previewLine
-                            .start.y
+                        previewLine.start.y
                     }
                     r="4"
                 />
@@ -1755,24 +1726,16 @@ export function LayoutGrid({
                 <circle
                     className="layout-track-preview-point"
                     cx={
-                        previewLine
-                            .end.x
+                        previewLine.end.x
                     }
                     cy={
-                        previewLine
-                            .end.y
+                        previewLine.end.y
                     }
                     r="4"
                 />
             </g>
         );
     }
-
-    /*
-     * ---------------------------------------------------------
-     * RENDER
-     * ---------------------------------------------------------
-     */
 
     return (
         <div
@@ -1857,9 +1820,6 @@ export function LayoutGrid({
                 }
                 onPointerCancel={
                     handlePointerCancel
-                }
-                onDoubleClick={
-                    handleDoubleClick
                 }
             >
                 {layout.cells.map(

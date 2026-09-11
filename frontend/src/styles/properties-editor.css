@@ -1,0 +1,196 @@
+.properties-editor-overlay {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 100%;
+
+    pointer-events: none;
+
+    z-index: 50;
+}
+
+.properties-editor-overlay.interactive {
+    pointer-events: auto;
+}
+
+.properties-editor-hit-layer {
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    display: block;
+
+    pointer-events: auto;
+
+    cursor: pointer;
+}
+
+.properties-block {
+    fill: rgba(0, 0, 0, 0.02);
+
+    stroke: transparent;
+
+    stroke-width: 1;
+
+    pointer-events: none;
+}
+
+.properties-block.active {
+    fill: rgba(0, 0, 0, 0.08);
+
+    stroke: #000000;
+
+    stroke-width: 2;
+
+    vector-effect: non-scaling-stroke;
+}
+
+.properties-editor-panel {
+    position: absolute;
+
+    top: 12px;
+    right: 12px;
+
+    width: 280px;
+    max-height: calc(100% - 24px);
+
+    overflow-y: auto;
+
+    box-sizing: border-box;
+
+    padding: 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #bdbdbd;
+
+    border-radius: 6px;
+
+    box-shadow:
+        0 4px 16px
+        rgba(0, 0, 0, 0.2);
+
+    pointer-events: auto;
+
+    font-size: 13px;
+}
+
+.properties-editor-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding-bottom: 10px;
+
+    margin-bottom: 10px;
+
+    border-bottom: 1px solid #dedede;
+
+    font-size: 15px;
+}
+
+.properties-editor-empty {
+    padding: 12px;
+
+    color: #666666;
+
+    line-height: 1.4;
+}
+
+.properties-editor-section {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+.properties-editor-section h4 {
+    margin: 0;
+
+    font-size: 14px;
+}
+
+.properties-editor-section label {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+
+    font-weight: 600;
+}
+
+.properties-editor-section input,
+.properties-editor-section select {
+    box-sizing: border-box;
+
+    width: 100%;
+
+    min-height: 34px;
+
+    padding: 6px 8px;
+
+    border: 1px solid #c8c8c8;
+
+    border-radius: 4px;
+
+    background: #ffffff;
+
+    font: inherit;
+}
+
+.properties-editor-section input:focus,
+.properties-editor-section select:focus {
+    outline: none;
+
+    border-color: #777777;
+
+    box-shadow:
+        0 0 0 1px
+        #777777;
+}
+
+.properties-editor-info {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 7px 8px;
+
+    background: #f1f1f1;
+
+    border-radius: 4px;
+}
+
+.properties-editor-save {
+    min-height: 36px;
+
+    padding: 7px 10px;
+
+    border: 1px solid #777777;
+
+    border-radius: 4px;
+
+    background: #555555;
+
+    color: #ffffff;
+
+    cursor: pointer;
+
+    font: inherit;
+
+    font-weight: 600;
+}
+
+.properties-editor-save:hover {
+    background: #3f3f3f;
+}

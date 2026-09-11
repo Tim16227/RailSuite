@@ -8,19 +8,9 @@ import {
     Navigate,
 } from "react-router-dom";
 
-import {
-    Tool,
-} from "./models/layout";
-
 import MenuBar from "./components/menubar/MenuBar";
 import LayoutPage from "./pages/LayoutPage";
 import Z21TestPanel from "./components/digital/Z21TestPanel";
-
-import DialogManager from "./components/dialog/utils/DialogManager";
-
-import {
-    DialogProvider,
-} from "./components/dialog/utils/DialogProvider";
 
 import {
     ToastContainer,
@@ -28,18 +18,30 @@ import {
 
 import "react-toastify/dist/ReactToastify.css";
 
+import {
+    DialogProvider,
+} from "./components/dialog/utils/DialogProvider";
+
 export default function App() {
+    /*
+     * null bedeutet:
+     * Kein Werkzeug ausgewählt.
+     *
+     * Es gibt dafür bewusst keinen
+     * eigenen Toolbar-Button mehr.
+     */
+    const [
+        tool,
+        setTool,
+    ] = useState(null);
 
-    const [tool, setTool] = useState(
-        Tool.NONE
-    );
-
-    const [editMode, setEditMode] =
-        useState(false);
+    const [
+        editMode,
+        setEditMode,
+    ] = useState(false);
 
     return (
         <DialogProvider>
-
             <ToastContainer />
 
             <MenuBar
@@ -50,7 +52,6 @@ export default function App() {
             />
 
             <Routes>
-
                 <Route
                     path="/"
                     element={
@@ -67,7 +68,9 @@ export default function App() {
                         <LayoutPage
                             tool={tool}
                             setTool={setTool}
-                            editMode={editMode}
+                            editMode={
+                                editMode
+                            }
                         />
                     }
                 />
@@ -78,11 +81,7 @@ export default function App() {
                         <Z21TestPanel />
                     }
                 />
-
             </Routes>
-
-            <DialogManager />
-
         </DialogProvider>
     );
 }
