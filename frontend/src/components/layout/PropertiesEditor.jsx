@@ -14,8 +14,9 @@ import {
 
 import {
     getBlocks,
-    updateBlock,
 } from "../../api/blockApi";
+
+import useDialogs from "../dialog/utils/useDialogs";
 
 import "../../styles/properties-editor.css";
 
@@ -25,7 +26,7 @@ export function PropertiesEditor({
     layout,
     tool,
     editMode,
-    onCellProperties,
+    onLayoutCellUpdated,
 }) {
     const [
         portalTarget,
@@ -37,19 +38,9 @@ export function PropertiesEditor({
         setBlocks,
     ] = useState([]);
 
-    const [
-        selectedBlockId,
-        setSelectedBlockId,
-    ] = useState(null);
-
-    const [
-        form,
-        setForm,
-    ] = useState({
-        name: "",
-        lengthMm: "",
-        direction: "BOTH",
-    });
+    const {
+        open,
+    } = useDialogs();
 
     useEffect(() => {
         if (!layout?.id) {
@@ -58,7 +49,7 @@ export function PropertiesEditor({
 
         let active = true;
 
-        async function load() {
+        async function loadBlocks() {
             try {
                 const result =
                     await getBlocks(
@@ -70,22 +61,24 @@ export function PropertiesEditor({
                 }
 
                 setBlocks(
-                    result
+                    result ?? []
                 );
-            } catch (error) {
+            } catch (exception) {
                 console.error(
-                    "Blockeigenschaften konnten nicht geladen werden:",
-                    error
+                    "Blöcke konnten nicht geladen werden:",
+                    exception
                 );
             }
         }
 
-        load();
+        loadBlocks();
 
         return () => {
             active = false;
         };
-    }, [layout?.id]);
+    }, [
+        layout?.id,
+    ]);
 
     useEffect(() => {
         if (!layout?.id) {
@@ -124,56 +117,24 @@ export function PropertiesEditor({
                 frame
             );
         };
-    }, [layout?.id]);
-
-    useEffect(() => {
-        const block =
-            blocks.find(
-                (item) =>
-                    item.id ===
-                    selectedBlockId
-            );
-
-        if (!block) {
-            return;
-        }
-
-        setForm({
-            name:
-                block.name ?? "",
-
-            lengthMm:
-                String(
-                    block.lengthMm ??
-                        ""
-                ),
-
-            direction:
-                block.direction ??
-                "BOTH",
-        });
     }, [
-        selectedBlockId,
-        blocks,
+        layout?.id,
     ]);
 
     if (
         !portalTarget ||
-        !layout
+        !layout ||
+        !editMode ||
+        tool !== Tool.PROPERTIES
     ) {
         return null;
     }
-
-    const interactive =
-        editMode &&
-        tool === Tool.PROPERTIES;
 
     function getCellFromEvent(
         event
     ) {
         const rect =
-            event.currentTarget
-                .getBoundingClientRect();
+            event.currentTarget.getBoundingClientRect();
 
         const x =
             Math.floor(
@@ -229,12 +190,29 @@ export function PropertiesEditor({
         );
     }
 
-    function handleOverlayClick(
+    function findLayoutCell(
+        cell
+    ) {
+        if (!cell) {
+            return null;
+        }
+
+        return (
+            layout.cells.find(
+                (layoutCell) =>
+                    layoutCell.x ===
+                        cell.x &&
+                    layoutCell.y ===
+                        cell.y
+            ) ?? null
+        );
+    }
+
+    function handleClick(
         event
     ) {
-        if (!interactive) {
-            return;
-        }
+        event.preventDefault();
+        event.stopPropagation();
 
         const cell =
             getCellFromEvent(
@@ -245,354 +223,118 @@ export function PropertiesEditor({
             return;
         }
 
+        /*
+         * Block zuerst prüfen.
+         *
+         * Ein Block hat bei einem Klick
+         * Vorrang vor einer darunterliegenden
+         * Gleiszelle.
+         */
         const block =
             findBlockAtCell(
                 cell
             );
 
-        /*
-         * Block hat Vorrang.
-         */
         if (block) {
-            setSelectedBlockId(
-                block.id
+            open(
+                "layout-block",
+                {
+                    layoutId:
+                        layout.id,
+
+                    block,
+
+                    onSaved:
+                        handleBlockSaved,
+                }
             );
 
             return;
         }
 
-        /*
-         * Kein Block -> prüfen, ob
-         * sich hier eine Weiche befindet.
-         */
         const layoutCell =
-            layout.cells.find(
-                (item) =>
-                    item.x === cell.x &&
-                    item.y === cell.y
+            findLayoutCell(
+                cell
             );
 
         if (
-            layoutCell?.elementType ===
+            layoutCell?.elementType !==
             LayoutElementType.TURNOUT
         ) {
-            setSelectedBlockId(
-                null
-            );
-
-            if (onCellProperties) {
-                onCellProperties(
-                    layoutCell
-                );
-            }
-
             return;
         }
 
-        setSelectedBlockId(
-            null
-        );
-    }
-
-    async function saveBlock() {
-        const block =
-            blocks.find(
-                (item) =>
-                    item.id ===
-                    selectedBlockId
-            );
-
-        if (!block) {
-            return;
-        }
-
-        try {
-            const updated =
-                await updateBlock(
+        open(
+            "layout-turnout",
+            {
+                layoutId:
                     layout.id,
-                    block.id,
-                    {
-                        name:
-                            form.name.trim() ||
-                            block.name,
 
-                        lengthMm:
-                            Number(
-                                form.lengthMm
-                            ),
+                cell:
+                    layoutCell,
 
-                        direction:
-                            form.direction,
+                onSaved:
+                    handleTurnoutSaved,
+            }
+        );
+    }
 
-                        cells:
-                            block.cells.map(
-                                (
-                                    cell
-                                ) => ({
-                                    x:
-                                        cell.x,
-                                    y:
-                                        cell.y,
-                                    sequenceIndex:
-                                        cell.sequenceIndex,
-                                })
-                            ),
-                    }
-                );
-
-            setBlocks(
-                (current) =>
-                    current.map(
-                        (item) =>
-                            item.id ===
-                            updated.id
-                                ? updated
-                                : item
-                    )
-            );
-        } catch (error) {
-            console.error(
-                "Blockeigenschaften konnten nicht gespeichert werden:",
-                error
+    function handleTurnoutSaved(
+        updatedCell
+    ) {
+        if (
+            onLayoutCellUpdated
+        ) {
+            onLayoutCellUpdated(
+                updatedCell
             );
         }
     }
 
-    function renderBlock(
-        block
+    function handleBlockSaved(
+        updatedBlock
     ) {
-        const active =
-            block.id ===
-            selectedBlockId;
+        if (!updatedBlock) {
+            return;
+        }
 
-        return (
-            <g
-                key={block.id}
-                className={
-                    active
-                        ? "properties-block active"
-                        : "properties-block"
-                }
-                pointerEvents="none"
-            >
-                {block.cells.map(
-                    (cell) => (
-                        <rect
-                            key={
-                                `${block.id}-${cell.x}-${cell.y}`
-                            }
-                            x={
-                                cell.x *
-                                    CELL_SIZE +
-                                3
-                            }
-                            y={
-                                cell.y *
-                                    CELL_SIZE +
-                                3
-                            }
-                            width={
-                                CELL_SIZE -
-                                6
-                            }
-                            height={
-                                CELL_SIZE -
-                                6
-                            }
-                            rx="5"
-                        />
-                    )
-                )}
-            </g>
+        setBlocks(
+            (current) =>
+                current.map(
+                    (block) =>
+                        block.id ===
+                        updatedBlock.id
+                            ? updatedBlock
+                            : block
+                )
         );
     }
-
-    const selectedBlock =
-        blocks.find(
-            (block) =>
-                block.id ===
-                selectedBlockId
-        ) ?? null;
 
     return createPortal(
-        <div
-            className={
-                interactive
-                    ? "properties-editor-overlay interactive"
-                    : "properties-editor-overlay"
-            }
-        >
-            {interactive && (
-                <svg
-                    className="properties-editor-hit-layer"
-                    width={
+        <div className="properties-editor-overlay interactive">
+            <svg
+                className="properties-editor-hit-layer"
+                width={
+                    layout.width *
+                    CELL_SIZE
+                }
+                height={
+                    layout.height *
+                    CELL_SIZE
+                }
+                viewBox={
+                    `0 0 ${
                         layout.width *
                         CELL_SIZE
-                    }
-                    height={
+                    } ${
                         layout.height *
                         CELL_SIZE
-                    }
-                    viewBox={
-                        `0 0 ${
-                            layout.width *
-                            CELL_SIZE
-                        } ${
-                            layout.height *
-                            CELL_SIZE
-                        }`
-                    }
-                    onClick={
-                        handleOverlayClick
-                    }
-                >
-                    {blocks.map(
-                        renderBlock
-                    )}
-                </svg>
-            )}
-
-            {interactive && (
-                <div className="properties-editor-panel">
-                    <div className="properties-editor-header">
-                        <strong>
-                            Eigenschaften
-                        </strong>
-                    </div>
-
-                    {!selectedBlock && (
-                        <div className="properties-editor-empty">
-                            Klicke auf ein Element,
-                            um dessen Eigenschaften
-                            zu öffnen.
-                        </div>
-                    )}
-
-                    {selectedBlock && (
-                        <>
-                            <div className="properties-editor-section">
-                                <h4>
-                                    Block
-                                </h4>
-
-                                <label>
-                                    Name
-
-                                    <input
-                                        value={
-                                            form.name
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    name:
-                                                        event
-                                                            .target
-                                                            .value,
-                                                })
-                                            )
-                                        }
-                                    />
-                                </label>
-
-                                <label>
-                                    Länge (mm)
-
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={
-                                            form.lengthMm
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    lengthMm:
-                                                        event
-                                                            .target
-                                                            .value,
-                                                })
-                                            )
-                                        }
-                                    />
-                                </label>
-
-                                <label>
-                                    Richtung
-
-                                    <select
-                                        value={
-                                            form.direction
-                                        }
-                                        onChange={(
-                                            event
-                                        ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    direction:
-                                                        event
-                                                            .target
-                                                            .value,
-                                                })
-                                            )
-                                        }
-                                    >
-                                        <option value="BOTH">
-                                            Beide Richtungen
-                                        </option>
-
-                                        <option value="FORWARD">
-                                            Vorwärts
-                                        </option>
-
-                                        <option value="REVERSE">
-                                            Rückwärts
-                                        </option>
-                                    </select>
-                                </label>
-
-                                <div className="properties-editor-info">
-                                    <span>
-                                        Zellen
-                                    </span>
-
-                                    <strong>
-                                        {
-                                            selectedBlock
-                                                .cells
-                                                ?.length ??
-                                            0
-                                        }
-                                    </strong>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    className="properties-editor-save"
-                                    onClick={() =>
-                                        void saveBlock()
-                                    }
-                                >
-                                    Eigenschaften speichern
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            )}
+                    }`
+                }
+                onClick={
+                    handleClick
+                }
+            />
         </div>,
         portalTarget
     );

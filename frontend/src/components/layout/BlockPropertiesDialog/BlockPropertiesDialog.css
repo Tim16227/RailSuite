@@ -1,0 +1,79 @@
+.block-properties-dialog {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 16px;
+}
+
+.block-properties-dialog-field {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 7px;
+}
+
+.block-properties-dialog-field > label {
+    font-weight: 600;
+}
+
+.block-properties-dialog-field input,
+.block-properties-dialog-field select {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    min-height: 38px;
+
+    padding: 8px 10px;
+
+    border: 1px solid #c8c8c8;
+
+    border-radius: 6px;
+
+    background: #ffffff;
+
+    font-size: 14px;
+
+    color: black;
+}
+
+.block-properties-dialog-field input:focus,
+.block-properties-dialog-field select:focus {
+    outline: none;
+
+    border-color: #777777;
+
+    box-shadow:
+        0 0 0 1px
+        #777777;
+}
+
+.block-properties-dialog-info {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 10px 12px;
+
+    border-radius: 6px;
+
+    background: #f1f1f1;
+
+    color: #444444;
+}
+
+.block-properties-dialog-error {
+    padding: 10px 12px;
+
+    border-radius: 6px;
+
+    background: #fbecec;
+
+    color: #9b1c1c;
+
+    font-size: 13px;
+}

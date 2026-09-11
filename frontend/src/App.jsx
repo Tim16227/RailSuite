@@ -12,23 +12,25 @@ import MenuBar from "./components/menubar/MenuBar";
 import LayoutPage from "./pages/LayoutPage";
 import Z21TestPanel from "./components/digital/Z21TestPanel";
 
+import DialogManager from "./components/dialog/utils/DialogManager";
+
+import {
+    DialogProvider,
+} from "./components/dialog/utils/DialogProvider";
+
 import {
     ToastContainer,
 } from "react-toastify";
 
 import "react-toastify/dist/ReactToastify.css";
 
-import {
-    DialogProvider,
-} from "./components/dialog/utils/DialogProvider";
-
 export default function App() {
     /*
      * null bedeutet:
      * Kein Werkzeug ausgewählt.
      *
-     * Es gibt dafür bewusst keinen
-     * eigenen Toolbar-Button mehr.
+     * Dafür gibt es bewusst keinen
+     * Toolbar-Button.
      */
     const [
         tool,
@@ -67,7 +69,9 @@ export default function App() {
                     element={
                         <LayoutPage
                             tool={tool}
-                            setTool={setTool}
+                            setTool={
+                                setTool
+                            }
                             editMode={
                                 editMode
                             }
@@ -82,6 +86,8 @@ export default function App() {
                     }
                 />
             </Routes>
+
+            <DialogManager />
         </DialogProvider>
     );
 }

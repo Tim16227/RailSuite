@@ -17,6 +17,10 @@ import {
 } from "../components/layout/BlockEditor";
 
 import {
+    LayoutSelectionOverlay,
+} from "../components/layout/LayoutSelectionOverlay";
+
+import {
     PropertiesEditor,
 } from "../components/layout/PropertiesEditor";
 
@@ -29,6 +33,11 @@ export default function LayoutPage({
         layout,
         setLayout,
     ] = useState(null);
+
+    const [
+        layoutRevision,
+        setLayoutRevision,
+    ] = useState(0);
 
     const [
         loading,
@@ -68,16 +77,15 @@ export default function LayoutPage({
                         "Mein Gleisplan",
 
                     width: 30,
-
                     height: 20,
                 });
 
             setLayout(
                 newLayout
             );
-        } catch (error) {
+        } catch (exception) {
             console.error(
-                error
+                exception
             );
 
             setError(
@@ -86,6 +94,71 @@ export default function LayoutPage({
         } finally {
             setLoading(false);
         }
+    }
+
+    function handleLayoutChanged(
+        updatedLayout
+    ) {
+        setLayout(
+            updatedLayout
+        );
+
+        /*
+         * LayoutEditor besitzt intern
+         * seinen eigenen Layout-State.
+         *
+         * Durch die neue Revision wird
+         * er nach einer Verschiebung
+         * sauber neu aufgebaut.
+         */
+        setLayoutRevision(
+            (current) =>
+                current + 1
+        );
+    }
+
+    function handleLayoutCellUpdated(
+        updatedCell
+    ) {
+        if (!updatedCell) {
+            return;
+        }
+
+        setLayout(
+            (current) => {
+                if (!current) {
+                    return current;
+                }
+
+                const cells =
+                    current.cells.filter(
+                        (cell) =>
+                            cell.x !==
+                                updatedCell.x ||
+                            cell.y !==
+                                updatedCell.y
+                    );
+
+                return {
+                    ...current,
+                    cells: [
+                        ...cells,
+                        updatedCell,
+                    ],
+                };
+            }
+        );
+
+        /*
+         * Der LayoutEditor soll die
+         * geänderte Weiche ebenfalls
+         * sofort aus seinem lokalen
+         * State übernehmen.
+         */
+        setLayoutRevision(
+            (current) =>
+                current + 1
+        );
     }
 
     if (loading) {
@@ -115,6 +188,9 @@ export default function LayoutPage({
     return (
         <>
             <LayoutEditor
+                key={
+                    `layout-editor-${layoutRevision}`
+                }
                 initialLayout={
                     layout
                 }
@@ -128,10 +204,24 @@ export default function LayoutPage({
             />
 
             <BlockEditor
+                key={
+                    `block-editor-${layoutRevision}`
+                }
                 layout={layout}
                 tool={tool}
                 editMode={
                     editMode
+                }
+            />
+
+            <LayoutSelectionOverlay
+                layout={layout}
+                tool={tool}
+                editMode={
+                    editMode
+                }
+                onLayoutChanged={
+                    handleLayoutChanged
                 }
             />
 
@@ -140,6 +230,9 @@ export default function LayoutPage({
                 tool={tool}
                 editMode={
                     editMode
+                }
+                onLayoutCellUpdated={
+                    handleLayoutCellUpdated
                 }
             />
         </>

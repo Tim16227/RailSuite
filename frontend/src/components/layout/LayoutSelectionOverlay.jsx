@@ -12,6 +12,11 @@ import {
     Tool,
 } from "../../models/layout";
 
+import {
+    deleteLayoutCell,
+    setLayoutCell,
+} from "../../api/layoutApi";
+
 import "../../styles/layout-selection.css";
 
 const CELL_SIZE = 40;
@@ -20,49 +25,14 @@ const HANDLE_SIZE = 8;
 
 const HANDLE_MARGIN = 2;
 
-function normalizeRange(
-    start,
-    end
-) {
-    return {
-        minX: Math.min(
-            start.x,
-            end.x
-        ),
-        minY: Math.min(
-            start.y,
-            end.y
-        ),
-        maxX: Math.max(
-            start.x,
-            end.x
-        ),
-        maxY: Math.max(
-            start.y,
-            end.y
-        ),
-    };
-}
-
-function clamp(
-    value,
-    min,
-    max
-) {
-    return Math.max(
-        min,
-        Math.min(
-            max,
-            value
-        )
-    );
-}
-
 function containsCell(
     range,
     cell
 ) {
-    if (!range || !cell) {
+    if (
+        !range ||
+        !cell
+    ) {
         return false;
     }
 
@@ -79,54 +49,102 @@ function getRangeFromHandle(
     handle,
     cell
 ) {
-    let minX = range.minX;
-    let maxX = range.maxX;
-    let minY = range.minY;
-    let maxY = range.maxY;
+    let minX =
+        range.minX;
+
+    let maxX =
+        range.maxX;
+
+    let minY =
+        range.minY;
+
+    let maxY =
+        range.maxY;
 
     if (
         handle.includes("w")
     ) {
-        minX = cell.x;
+        minX =
+            Math.min(
+                cell.x,
+                maxX
+            );
     }
 
     if (
         handle.includes("e")
     ) {
-        maxX = cell.x;
+        maxX =
+            Math.max(
+                cell.x,
+                minX
+            );
     }
 
     if (
         handle.includes("n")
     ) {
-        minY = cell.y;
+        minY =
+            Math.min(
+                cell.y,
+                maxY
+            );
     }
 
     if (
         handle.includes("s")
     ) {
-        maxY = cell.y;
+        maxY =
+            Math.max(
+                cell.y,
+                minY
+            );
     }
 
     /*
-     * Verhindert, dass ein Ziehgriff
-     * über den gegenüberliegenden
-     * Rand hinausläuft.
+     * Wenn ein Griff über die
+     * gegenüberliegende Seite gezogen
+     * wird, wird die Auswahl weiterhin
+     * als gültiges Rechteck gehalten.
      */
-    if (minX > maxX) {
-        if (handle.includes("w")) {
-            minX = maxX;
-        } else {
-            maxX = minX;
-        }
+    if (
+        handle.includes("w") &&
+        cell.x > range.maxX
+    ) {
+        minX =
+            range.maxX;
+        maxX =
+            cell.x;
     }
 
-    if (minY > maxY) {
-        if (handle.includes("n")) {
-            minY = maxY;
-        } else {
-            maxY = minY;
-        }
+    if (
+        handle.includes("e") &&
+        cell.x < range.minX
+    ) {
+        minX =
+            cell.x;
+        maxX =
+            range.minX;
+    }
+
+    if (
+        handle.includes("n") &&
+        cell.y > range.maxY
+    ) {
+        minY =
+            range.maxY;
+        maxY =
+            cell.y;
+    }
+
+    if (
+        handle.includes("s") &&
+        cell.y < range.minY
+    ) {
+        minY =
+            cell.y;
+        maxY =
+            range.minY;
     }
 
     return {
@@ -137,11 +155,31 @@ function getRangeFromHandle(
     };
 }
 
+function rangeWidth(
+    range
+) {
+    return (
+        range.maxX -
+        range.minX +
+        1
+    );
+}
+
+function rangeHeight(
+    range
+) {
+    return (
+        range.maxY -
+        range.minY +
+        1
+    );
+}
+
 export function LayoutSelectionOverlay({
     layout,
     tool,
     editMode,
-    onMoveSelection,
+    onLayoutChanged,
 }) {
     const [
         portalTarget,
@@ -200,15 +238,14 @@ export function LayoutSelectionOverlay({
         };
     }, [
         layout?.id,
+        layout?.width,
+        layout?.height,
     ]);
 
     useEffect(() => {
         if (
             !editMode ||
-            (
-                tool !== null &&
-                tool !== Tool.MOVE
-            )
+            tool !== Tool.MOVE
         ) {
             pointerRef.current =
                 null;
@@ -225,22 +262,9 @@ export function LayoutSelectionOverlay({
     if (
         !portalTarget ||
         !layout ||
-        !editMode
+        !editMode ||
+        tool !== Tool.MOVE
     ) {
-        return null;
-    }
-
-    /*
-     * Das Overlay ist nur aktiv, wenn
-     * entweder kein Werkzeug ausgewählt
-     * oder das Verschieben-Werkzeug
-     * aktiv ist.
-     */
-    const active =
-        tool === null ||
-        tool === Tool.MOVE;
-
-    if (!active) {
         return null;
     }
 
@@ -259,29 +283,33 @@ export function LayoutSelectionOverlay({
             event.currentTarget.getBoundingClientRect();
 
         const x =
-            clamp(
-                Math.floor(
-                    (
-                        event.clientX -
-                        rect.left
-                    ) /
-                        CELL_SIZE
-                ),
+            Math.max(
                 0,
-                layout.width - 1
+                Math.min(
+                    layout.width - 1,
+                    Math.floor(
+                        (
+                            event.clientX -
+                            rect.left
+                        ) /
+                            CELL_SIZE
+                    )
+                )
             );
 
         const y =
-            clamp(
-                Math.floor(
-                    (
-                        event.clientY -
-                        rect.top
-                    ) /
-                        CELL_SIZE
-                ),
+            Math.max(
                 0,
-                layout.height - 1
+                Math.min(
+                    layout.height - 1,
+                    Math.floor(
+                        (
+                            event.clientY -
+                            rect.top
+                        ) /
+                            CELL_SIZE
+                    )
+                )
             );
 
         return {
@@ -290,24 +318,7 @@ export function LayoutSelectionOverlay({
         };
     }
 
-    function getPointerPixel(
-        event
-    ) {
-        const rect =
-            event.currentTarget.getBoundingClientRect();
-
-        return {
-            x:
-                event.clientX -
-                rect.left,
-
-            y:
-                event.clientY -
-                rect.top,
-        };
-    }
-
-    function getHandleFromTarget(
+    function getHandle(
         target
     ) {
         if (
@@ -318,18 +329,40 @@ export function LayoutSelectionOverlay({
         }
 
         return (
-            target.dataset.selectionHandle ??
+            target.dataset
+                .selectionHandle ??
             null
+        );
+    }
+
+    function startMove(
+        event,
+        cell,
+        range
+    ) {
+        pointerRef.current = {
+            type: "move",
+
+            startCell: cell,
+
+            originalSelection:
+                range,
+
+            deltaX: 0,
+            deltaY: 0,
+
+            pointerId:
+                event.pointerId,
+        };
+
+        event.currentTarget.setPointerCapture(
+            event.pointerId
         );
     }
 
     function handlePointerDown(
         event
     ) {
-        if (!active) {
-            return;
-        }
-
         event.preventDefault();
         event.stopPropagation();
 
@@ -339,12 +372,13 @@ export function LayoutSelectionOverlay({
             );
 
         const handle =
-            getHandleFromTarget(
+            getHandle(
                 event.target
             );
 
         /*
-         * Bereich vergrößern/verkleinern.
+         * Die acht Punkte dienen ausschließlich
+         * zum Verändern der Auswahl.
          */
         if (
             selection &&
@@ -352,7 +386,9 @@ export function LayoutSelectionOverlay({
         ) {
             pointerRef.current = {
                 type: "resize",
+
                 handle,
+
                 pointerId:
                     event.pointerId,
             };
@@ -365,58 +401,40 @@ export function LayoutSelectionOverlay({
         }
 
         /*
-         * Verschieben:
+         * Jeder normale Klick markiert
+         * genau die angeklickte Zelle.
          *
-         * Wenn das Verschieben-Werkzeug
-         * aktiv ist und innerhalb der
-         * aktuellen Auswahl geklickt wird,
-         * beginnt der Verschiebevorgang.
+         * Danach beginnt sofort der
+         * Verschiebevorgang.
          */
+        let range;
+
         if (
-            tool === Tool.MOVE &&
             selection &&
             containsCell(
                 selection,
                 cell
             )
         ) {
-            pointerRef.current = {
-                type: "move",
-                startCell: cell,
-                originalSelection:
-                    selection,
-                lastDeltaX: 0,
-                lastDeltaY: 0,
-                pointerId:
-                    event.pointerId,
+            range =
+                selection;
+        } else {
+            range = {
+                minX: cell.x,
+                maxX: cell.x,
+                minY: cell.y,
+                maxY: cell.y,
             };
 
-            event.currentTarget.setPointerCapture(
-                event.pointerId
+            setSelection(
+                range
             );
-
-            return;
         }
 
-        /*
-         * Neue Auswahl beginnen.
-         */
-        pointerRef.current = {
-            type: "select",
-            startCell: cell,
-            pointerId:
-                event.pointerId,
-        };
-
-        setSelection(
-            normalizeRange(
-                cell,
-                cell
-            )
-        );
-
-        event.currentTarget.setPointerCapture(
-            event.pointerId
+        startMove(
+            event,
+            cell,
+            range
         );
     }
 
@@ -441,26 +459,13 @@ export function LayoutSelectionOverlay({
 
         if (
             state.type ===
-            "select"
-        ) {
-            const nextSelection =
-                normalizeRange(
-                    state.startCell,
-                    cell
-                );
-
-            setSelection(
-                nextSelection
-            );
-
-            return;
-        }
-
-        if (
-            state.type ===
             "resize"
         ) {
-            const nextSelection =
+            if (!selection) {
+                return;
+            }
+
+            const resized =
                 getRangeFromHandle(
                     selection,
                     state.handle,
@@ -468,56 +473,248 @@ export function LayoutSelectionOverlay({
                 );
 
             setSelection(
-                nextSelection
+                resized
             );
 
             return;
         }
 
         if (
-            state.type ===
+            state.type !==
             "move"
         ) {
-            const deltaX =
-                cell.x -
-                state.startCell.x;
+            return;
+        }
 
-            const deltaY =
-                cell.y -
-                state.startCell.y;
+        const deltaX =
+            cell.x -
+            state.startCell.x;
 
-            state.lastDeltaX =
+        const deltaY =
+            cell.y -
+            state.startCell.y;
+
+        state.deltaX =
+            deltaX;
+
+        state.deltaY =
+            deltaY;
+
+        setPreviewSelection({
+            minX:
+                state
+                    .originalSelection
+                    .minX +
+                deltaX,
+
+            maxX:
+                state
+                    .originalSelection
+                    .maxX +
+                deltaX,
+
+            minY:
+                state
+                    .originalSelection
+                    .minY +
+                deltaY,
+
+            maxY:
+                state
+                    .originalSelection
+                    .maxY +
+                deltaY,
+        });
+    }
+
+    async function moveSelection(
+        range,
+        deltaX,
+        deltaY
+    ) {
+        if (
+            !range ||
+            (
+                deltaX === 0 &&
+                deltaY === 0
+            )
+        ) {
+            return false;
+        }
+
+        const targetMinX =
+            range.minX +
+            deltaX;
+
+        const targetMaxX =
+            range.maxX +
+            deltaX;
+
+        const targetMinY =
+            range.minY +
+            deltaY;
+
+        const targetMaxY =
+            range.maxY +
+            deltaY;
+
+        /*
+         * Auswahl darf das Layout
+         * nicht verlassen.
+         */
+        if (
+            targetMinX < 0 ||
+            targetMinY < 0 ||
+            targetMaxX >=
+                layout.width ||
+            targetMaxY >=
+                layout.height
+        ) {
+            return false;
+        }
+
+        const selectedCells =
+            layout.cells.filter(
+                (cell) =>
+                    cell.x >=
+                        range.minX &&
+                    cell.x <=
+                        range.maxX &&
+                    cell.y >=
+                        range.minY &&
+                    cell.y <=
+                        range.maxY
+            );
+
+        /*
+         * Leere Auswahl kann nicht
+         * verschoben werden.
+         */
+        if (
+            selectedCells.length ===
+            0
+        ) {
+            return false;
+        }
+
+        const selectedKeys =
+            new Set(
+                selectedCells.map(
+                    (cell) =>
+                        `${cell.x}:${cell.y}`
+                )
+            );
+
+        /*
+         * Keine Zelle darf beim Verschieben
+         * eine fremde Zelle überschreiben.
+         */
+        for (
+            const cell of
+                selectedCells
+        ) {
+            const targetX =
+                cell.x +
                 deltaX;
 
-            state.lastDeltaY =
+            const targetY =
+                cell.y +
                 deltaY;
 
-            setPreviewSelection({
-                minX:
-                    state
-                        .originalSelection
-                        .minX +
-                    deltaX,
+            const collision =
+                layout.cells.find(
+                    (other) =>
+                        !selectedKeys.has(
+                            `${other.x}:${other.y}`
+                        ) &&
+                        other.x ===
+                            targetX &&
+                        other.y ===
+                            targetY
+                );
 
-                maxX:
-                    state
-                        .originalSelection
-                        .maxX +
-                    deltaX,
+            if (collision) {
+                return false;
+            }
+        }
 
-                minY:
-                    state
-                        .originalSelection
-                        .minY +
-                    deltaY,
+        /*
+         * Originalzellen löschen.
+         */
+        for (
+            const cell of
+                selectedCells
+        ) {
+            await deleteLayoutCell(
+                layout.id,
+                cell.x,
+                cell.y
+            );
+        }
 
-                maxY:
-                    state
-                        .originalSelection
-                        .maxY +
-                    deltaY,
+        /*
+         * Zellen an den neuen Positionen
+         * wieder anlegen.
+         */
+        const movedCells =
+            [];
+
+        for (
+            const cell of
+                selectedCells
+        ) {
+            const moved =
+                await setLayoutCell(
+                    layout.id,
+                    cell.x +
+                        deltaX,
+                    cell.y +
+                        deltaY,
+                    cell.elementType,
+                    cell.orientation,
+                    cell.turnoutHand,
+                    cell.digitalSystem
+                        ?.id ??
+                        null,
+                    cell.digitalAddress ??
+                        null
+                );
+
+            movedCells.push(
+                moved
+            );
+        }
+
+        if (
+            onLayoutChanged
+        ) {
+            const deletedKeys =
+                new Set(
+                    selectedCells.map(
+                        (cell) =>
+                            `${cell.x}:${cell.y}`
+                    )
+                );
+
+            const remaining =
+                layout.cells.filter(
+                    (cell) =>
+                        !deletedKeys.has(
+                            `${cell.x}:${cell.y}`
+                        )
+                );
+
+            onLayoutChanged({
+                ...layout,
+
+                cells: [
+                    ...remaining,
+                    ...movedCells,
+                ],
             });
         }
+
+        return true;
     }
 
     async function handlePointerUp(
@@ -549,90 +746,69 @@ export function LayoutSelectionOverlay({
 
         if (
             state.type ===
-            "move"
+            "resize"
         ) {
-            const {
-                lastDeltaX,
-                lastDeltaY,
-                originalSelection,
-            } = state;
-
-            setPreviewSelection(
-                null
-            );
-
-            if (
-                lastDeltaX === 0 &&
-                lastDeltaY === 0
-            ) {
-                return;
-            }
-
-            try {
-                const moved =
-                    await onMoveSelection(
-                        originalSelection,
-                        lastDeltaX,
-                        lastDeltaY
-                    );
-
-                if (moved) {
-                    setSelection({
-                        minX:
-                            originalSelection.minX +
-                            lastDeltaX,
-
-                        maxX:
-                            originalSelection.maxX +
-                            lastDeltaX,
-
-                        minY:
-                            originalSelection.minY +
-                            lastDeltaY,
-
-                        maxY:
-                            originalSelection.maxY +
-                            lastDeltaY,
-                    });
-                }
-            } catch (error) {
-                console.error(
-                    "Fehler beim Verschieben der Auswahl:",
-                    error
-                );
-            }
-
             return;
         }
 
-        /*
-         * Beim einfachen Klicken bleibt
-         * die einzelne Zelle als Auswahl
-         * bestehen.
-         */
         if (
-            state.type ===
-            "select"
+            state.type !==
+            "move"
         ) {
-            const cell =
-                getCellFromPointer(
-                    event
-                );
-
-            setSelection(
-                normalizeRange(
-                    state.startCell,
-                    cell
-                )
-            );
+            return;
         }
 
+        const deltaX =
+            state.deltaX ?? 0;
+
+        const deltaY =
+            state.deltaY ?? 0;
+
+        const originalSelection =
+            state.originalSelection;
+
+        setPreviewSelection(
+            null
+        );
+
         if (
-            state.type ===
-            "resize"
+            deltaX === 0 &&
+            deltaY === 0
         ) {
-            setSelection(
-                selection
+            return;
+        }
+
+        try {
+            const moved =
+                await moveSelection(
+                    originalSelection,
+                    deltaX,
+                    deltaY
+                );
+
+            if (moved) {
+                setSelection({
+                    minX:
+                        originalSelection.minX +
+                        deltaX,
+
+                    maxX:
+                        originalSelection.maxX +
+                        deltaX,
+
+                    minY:
+                        originalSelection.minY +
+                        deltaY,
+
+                    maxY:
+                        originalSelection.maxY +
+                        deltaY,
+                });
+            }
+        } catch (exception) {
+            console.error(
+                "Fehler beim Verschieben:",
+                exception
             );
         }
     }
@@ -669,7 +845,7 @@ export function LayoutSelectionOverlay({
         }
     }
 
-    function renderSelection(
+    function renderRange(
         range,
         className
     ) {
@@ -677,43 +853,33 @@ export function LayoutSelectionOverlay({
             return null;
         }
 
-        const x =
-            range.minX *
-            CELL_SIZE;
-
-        const y =
-            range.minY *
-            CELL_SIZE;
-
-        const selectionWidth =
-            (
-                range.maxX -
-                range.minX +
-                1
-            ) *
-            CELL_SIZE;
-
-        const selectionHeight =
-            (
-                range.maxY -
-                range.minY +
-                1
-            ) *
-            CELL_SIZE;
-
         return (
             <rect
                 className={
                     className
                 }
-                x={x + 1}
-                y={y + 1}
+                x={
+                    range.minX *
+                        CELL_SIZE +
+                    1
+                }
+                y={
+                    range.minY *
+                        CELL_SIZE +
+                    1
+                }
                 width={
-                    selectionWidth -
+                    rangeWidth(
+                        range
+                    ) *
+                        CELL_SIZE -
                     2
                 }
                 height={
-                    selectionHeight -
+                    rangeHeight(
+                        range
+                    ) *
+                        CELL_SIZE -
                     2
                 }
             />
@@ -735,13 +901,11 @@ export function LayoutSelectionOverlay({
                 }
                 x={
                     x -
-                    HANDLE_SIZE /
-                        2
+                    HANDLE_SIZE / 2
                 }
                 y={
                     y -
-                    HANDLE_SIZE /
-                        2
+                    HANDLE_SIZE / 2
                 }
                 width={
                     HANDLE_SIZE
@@ -876,20 +1040,20 @@ export function LayoutSelectionOverlay({
                     handlePointerMove
                 }
                 onPointerUp={
-                    void handlePointerUp
+                    handlePointerUp
                 }
                 onPointerCancel={
                     handlePointerCancel
                 }
             >
                 {previewSelection &&
-                    renderSelection(
+                    renderRange(
                         previewSelection,
                         "layout-selection-preview"
                     )}
 
                 {selection &&
-                    renderSelection(
+                    renderRange(
                         selection,
                         "layout-selection-rect"
                     )}

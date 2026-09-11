@@ -26,7 +26,11 @@
 
     touch-action: none;
 
-    cursor: crosshair;
+    cursor: grab;
+}
+
+.layout-selection-layer:active {
+    cursor: grabbing;
 }
 
 .layout-selection-rect {
