@@ -8,6 +8,7 @@ import {
 } from "react-dom";
 
 import {
+    LayoutElementType,
     Tool,
 } from "../../models/layout";
 
@@ -24,6 +25,7 @@ export function PropertiesEditor({
     layout,
     tool,
     editMode,
+    onCellProperties,
 }) {
     const [
         portalTarget,
@@ -239,21 +241,56 @@ export function PropertiesEditor({
                 event
             );
 
+        if (!cell) {
+            return;
+        }
+
         const block =
             findBlockAtCell(
                 cell
             );
 
-        if (!block) {
+        /*
+         * Block hat Vorrang.
+         */
+        if (block) {
             setSelectedBlockId(
-                null
+                block.id
             );
 
             return;
         }
 
+        /*
+         * Kein Block -> prüfen, ob
+         * sich hier eine Weiche befindet.
+         */
+        const layoutCell =
+            layout.cells.find(
+                (item) =>
+                    item.x === cell.x &&
+                    item.y === cell.y
+            );
+
+        if (
+            layoutCell?.elementType ===
+            LayoutElementType.TURNOUT
+        ) {
+            setSelectedBlockId(
+                null
+            );
+
+            if (onCellProperties) {
+                onCellProperties(
+                    layoutCell
+                );
+            }
+
+            return;
+        }
+
         setSelectedBlockId(
-            block.id
+            null
         );
     }
 

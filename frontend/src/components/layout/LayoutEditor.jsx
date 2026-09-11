@@ -26,6 +26,14 @@ import {
     LayoutGrid,
 } from "./LayoutGrid";
 
+import {
+    PropertiesEditor,
+} from "./PropertiesEditor";
+
+import {
+    LayoutSelectionOverlay,
+} from "./LayoutSelectionOverlay";
+
 export function LayoutEditor({
     initialLayout,
     tool,
@@ -471,7 +479,7 @@ export function LayoutEditor({
                 deltaY === 0
             )
         ) {
-            return;
+            return false;
         }
 
         const selectedCells =
@@ -487,11 +495,40 @@ export function LayoutEditor({
                         range.maxY
             );
 
+        /*
+         * Der gesamte Auswahlbereich muss
+         * innerhalb des Layouts bleiben.
+         */
+        const targetMinX =
+            range.minX + deltaX;
+
+        const targetMaxX =
+            range.maxX + deltaX;
+
+        const targetMinY =
+            range.minY + deltaY;
+
+        const targetMaxY =
+            range.maxY + deltaY;
+
+        if (
+            targetMinX < 0 ||
+            targetMinY < 0 ||
+            targetMaxX >= layout.width ||
+            targetMaxY >= layout.height
+        ) {
+            console.warn(
+                "Bereich kann nicht verschoben werden: Ziel liegt außerhalb des Layouts."
+            );
+
+            return false;
+        }
+
         if (
             selectedCells.length ===
             0
         ) {
-            return;
+            return false;
         }
 
         const selectedKeys =
@@ -533,7 +570,7 @@ export function LayoutEditor({
                     collision
                 );
 
-                return;
+                return false;
             }
         }
 
@@ -609,6 +646,7 @@ export function LayoutEditor({
                 };
             }
         );
+    return true;
     }
 
     /*
@@ -1711,11 +1749,27 @@ export function LayoutEditor({
                     onCellAction={
                         handleCellAction
                     }
-                    onCellProperties={
-                        handleCellProperties
+                />
+
+                <LayoutSelectionOverlay
+                    layout={layout}
+                    tool={tool}
+                    editMode={
+                        editMode
                     }
                     onMoveSelection={
                         moveSelection
+                    }
+                />
+
+                <PropertiesEditor
+                    layout={layout}
+                    tool={tool}
+                    editMode={
+                        editMode
+                    }
+                    onCellProperties={
+                        handleCellProperties
                     }
                 />
             </div>
