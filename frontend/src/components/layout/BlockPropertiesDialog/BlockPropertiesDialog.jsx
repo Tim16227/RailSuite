@@ -219,6 +219,32 @@ export default function BlockPropertiesDialog({
         block?.id,
     ]);
 
+    function getAutomaticBlockOrientation(cells) {
+        if (!cells?.length) {
+            return BlockGridOrientation.HORIZONTAL;
+        }
+
+        const xs = cells.map(
+            (cell) => Number(cell.x) || 0
+        );
+
+        const ys = cells.map(
+            (cell) => Number(cell.y) || 0
+        );
+
+        const width =
+            Math.max(...xs) -
+            Math.min(...xs);
+
+        const height =
+            Math.max(...ys) -
+            Math.min(...ys);
+
+        return width >= height
+            ? BlockGridOrientation.HORIZONTAL
+            : BlockGridOrientation.VERTICAL;
+    }
+
     function clearError() {
         if (error) {
             setError(
@@ -378,8 +404,9 @@ export default function BlockPropertiesDialog({
                         maximumTrainLengthMm:
                             numericTrainLength,
                         gridOrientation:
-                            data.gridOrientation ??
-                            BlockGridOrientation.HORIZONTAL,
+                            getAutomaticBlockOrientation(
+                                data.cells
+                            ),
                     }
                 );
 

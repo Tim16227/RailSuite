@@ -212,64 +212,6 @@
         rotate(90deg);
 }
 
-.block-editor-contact-handle {
-    position: absolute;
-
-    width: 12px;
-    height: 18px;
-
-    padding: 0;
-
-    border: 1px solid #700;
-    border-radius: 3px;
-
-    background: #a00000;
-
-    cursor: ew-resize;
-
-    z-index: 30;
-}
-
-.block-editor-contact-handle.start {
-    left: -7px;
-    top: 50%;
-
-    transform: translateY(-50%);
-}
-
-.block-editor-contact-handle.end {
-    right: -7px;
-    top: 50%;
-
-    transform: translateY(-50%);
-}
-
-.block-editor-preview-area.vertical
-    .block-editor-contact-handle {
-    width: 18px;
-    height: 12px;
-
-    cursor: ns-resize;
-}
-
-.block-editor-preview-area.vertical
-    .block-editor-contact-handle.start {
-    top: -7px;
-    left: 50%;
-
-    transform: translateX(-50%);
-}
-
-.block-editor-preview-area.vertical
-    .block-editor-contact-handle.end {
-    bottom: -7px;
-    top: auto;
-    left: 50%;
-    right: auto;
-
-    transform: translateX(-50%);
-}
-
 .block-editor-signal {
     position: relative;
 
@@ -405,30 +347,25 @@
     right: 4px;
 }
 
-.block-editor-marker-flag {
-    position: absolute;
-
-    width: 1px;
-    height: 52px;
-
-    padding: 0;
-
-    border: 0;
-
-    background: transparent;
-
-    cursor: pointer;
-
-    transform: translateX(-50%);
-
-    z-index: 50;
-}
-
 .block-editor-marker-row.bottom
     .block-editor-marker-flag {
     transform:
         translateX(-50%)
         rotate(180deg);
+}
+
+.block-editor-marker-row.bottom
+    .block-editor-marker-mast {
+    left: 0;
+    right: auto;
+}
+
+.block-editor-marker-row.bottom
+    .block-editor-marker-flag-shape {
+    left: 2px;
+    right: auto;
+    transform: none;
+    transform-origin: left center;
 }
 
 .block-editor-preview-area.vertical
@@ -449,29 +386,38 @@
         rotate(90deg);
 }
 
+.block-editor-marker-flag {
+    position: absolute;
+    width: 1px;
+    height: 52px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    transform: translateX(-50%);
+    z-index: 50;
+}
+
 .block-editor-marker-mast {
     position: absolute;
-
-    left: 0;
+    right: 0;
     top: 5px;
-
     width: 2px;
-    height: 38px;
-
+    height: 40px;
     background: var(--marker-color);
 }
 
 .block-editor-marker-flag-shape {
     position: absolute;
-
-    left: 1px;
+    right: 2px;
     top: 5px;
-
-    width: 26px;
+    width: var(--flag-ramp);
+    min-width: 8px;
+    max-width: 120px;
     height: 16px;
-
+    transform: translateX(-100%) scaleX(-1);
+    transform-origin: right center;
     background: var(--marker-color);
-
     clip-path: polygon(
         0 0,
         100% 0,

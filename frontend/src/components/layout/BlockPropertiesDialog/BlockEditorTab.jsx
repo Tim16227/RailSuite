@@ -118,6 +118,27 @@ function getContactLength(contact, blockLength) {
     );
 }
 
+function getAutomaticOrientation(cells) {
+    if (!cells?.length) {
+        return BlockGridOrientation.HORIZONTAL;
+    }
+
+    const xs = cells.map((cell) => Number(cell.x) || 0);
+    const ys = cells.map((cell) => Number(cell.y) || 0);
+
+    const width =
+        Math.max(...xs) -
+        Math.min(...xs);
+
+    const height =
+        Math.max(...ys) -
+        Math.min(...ys);
+
+    return width >= height
+        ? BlockGridOrientation.HORIZONTAL
+        : BlockGridOrientation.VERTICAL;
+}
+
 function MarkerFlag({
     marker,
     contact,
@@ -126,6 +147,7 @@ function MarkerFlag({
     selected,
     onClick,
 }) {
+
     const contactStart =
         getContactPosition(contact);
 
@@ -147,36 +169,39 @@ function MarkerFlag({
         BlockMarkerType.STOP
             ? 0
             : clamp(
-                  Number(marker.lengthMm) ||
-                      0,
+                  Number(marker.lengthMm) || 0,
                   0,
                   Math.max(
                       0,
-                      contactLength -
-                          distance
+                      blockLength -
+                          (
+                              contactStart +
+                              distance
+                          )
                   )
               );
 
-    const total =
-        Math.max(
-            1,
-            contactLength
-        );
-
-    const relativePosition =
+    const blockPosition =
         clamp(
             (
-                distance +
-                ramp
+                contactStart +
+                distance
             ) /
-                total,
+                Math.max(
+                    1,
+                    blockLength
+                ),
             0,
             1
         );
 
-    const mastPosition =
+    const rampWidth =
         clamp(
-            distance / total,
+            ramp /
+                Math.max(
+                    1,
+                    blockLength
+                ),
             0,
             1
         );
@@ -197,28 +222,21 @@ function MarkerFlag({
         orientation ===
         BlockGridOrientation.HORIZONTAL
             ? {
-                  left: `${mastPosition * 100}%`,
+                  left: `${blockPosition * 100}%`,
                   "--flag-ramp":
                       `${Math.max(
                           8,
-                          relativePosition *
-                              100 -
-                              mastPosition *
-                                  100
+                          rampWidth * 100
                       )}%`,
               }
             : {
-                  top: `${mastPosition * 100}%`,
+                  top: `${blockPosition * 100}%`,
                   "--flag-ramp":
                       `${Math.max(
                           8,
-                          relativePosition *
-                              100 -
-                              mastPosition *
-                                  100
+                          rampWidth * 100
                       )}%`,
               };
-
     return (
         <button
             type="button"
@@ -337,12 +355,8 @@ export default function BlockEditorTab({
         open,
     } = useDialogs();
 
-    const [
-        orientation,
-        setOrientation,
-    ] = useState(
-        data?.gridOrientation ??
-            BlockGridOrientation.HORIZONTAL
+    const orientation = getAutomaticOrientation(
+        data?.cells
     );
 
     const [
@@ -375,8 +389,6 @@ export default function BlockEditorTab({
         setDigitalSystems,
     ] = useState([]);
 
-    const dragRef =
-        useRef(null);
 
     const dataRef =
         useRef(data);
@@ -468,11 +480,6 @@ export default function BlockEditorTab({
     }, [layoutId]);
 
     useEffect(() => {
-        setOrientation(
-            data?.gridOrientation ??
-                BlockGridOrientation.HORIZONTAL
-        );
-
         setSelectedMarkerId(
             null
         );
@@ -499,56 +506,6 @@ export default function BlockEditorTab({
             ...dataRef.current,
             ...patch,
         });
-    }
-
-    async function changeOrientation(
-        value
-    ) {
-        setOrientation(value);
-
-        try {
-            const response =
-                await apiFetch(
-                    `/api/layouts/${layoutId}/block-editor/${blockId}`,
-                    {
-                        method: "PUT",
-                        body: JSON.stringify({
-                            name:
-                                data.name,
-                            lengthMm:
-                                data.lengthMm,
-                            direction:
-                                data.direction,
-                            showSignals:
-                                data.showSignals,
-                            visibleOnlyInEditMode:
-                                data.visibleOnlyInEditMode,
-                            requestYellow:
-                                data.requestYellow,
-                            maximumSpeedKmh:
-                                data.maximumSpeedKmh,
-                            slowSpeedKmh:
-                                data.slowSpeedKmh,
-                            includeInTrainTracking:
-                                data.includeInTrainTracking,
-                            maximumTrainLengthMm:
-                                data.maximumTrainLengthMm,
-                            gridOrientation:
-                                value,
-                        }),
-                    }
-                );
-
-            const updated =
-                await response.json();
-
-            updateData(updated);
-        } catch (error) {
-            console.error(
-                "Ausrichtung konnte nicht gespeichert werden:",
-                error
-            );
-        }
     }
 
     function getContactSectionLength(
@@ -818,23 +775,20 @@ export default function BlockEditorTab({
         positionMm,
         lengthMm
     ) {
-        const safePosition =
-            clamp(
-                Number(positionMm),
-                0,
-                dataRef.current.lengthMm
-            );
+        const position = clamp(
+            Number(positionMm) || 0,
+            0,
+            Math.max(0, data.lengthMm - 1)
+        );
 
-        const safeLength =
-            clamp(
-                Number(lengthMm),
+        const length = clamp(
+            Number(lengthMm) || 1,
+            1,
+            Math.max(
                 1,
-                Math.max(
-                    1,
-                    dataRef.current.lengthMm -
-                        safePosition
-                )
-            );
+                data.lengthMm - position
+            )
+        );
 
         try {
             const updated =
@@ -843,30 +797,23 @@ export default function BlockEditorTab({
                     blockId,
                     contact.id,
                     {
-                        positionMm:
-                            safePosition,
-                        lengthMm:
-                            safeLength,
+                        positionMm: position,
+                        lengthMm: length,
                     }
                 );
 
             updateData({
-                contacts:
-                    (
-                        dataRef.current
-                            .contacts ??
-                        []
-                    ).map(
-                        (item) =>
-                            item.id ===
-                            updated.id
-                                ? updated
-                                : item
-                    ),
+                contacts: (
+                    dataRef.current.contacts ?? []
+                ).map((item) =>
+                    item.id === updated.id
+                        ? updated
+                        : item
+                ),
             });
         } catch (error) {
             console.error(
-                "Belegtmelder konnte nicht geändert werden:",
+                "Belegtmelder konnte nicht gespeichert werden:",
                 error
             );
         }
@@ -1084,42 +1031,6 @@ export default function BlockEditorTab({
         );
     }
 
-    function startContactDrag(
-        event,
-        contact,
-        edge
-    ) {
-        event.stopPropagation();
-        event.preventDefault();
-
-        dragRef.current = {
-            contactId:
-                contact.id,
-            edge,
-            positionMm:
-                getContactPosition(
-                    contact
-                ),
-            lengthMm:
-                getContactSectionLength(
-                    contact
-                ),
-        };
-
-        window.addEventListener(
-            "pointermove",
-            handleContactDrag
-        );
-
-        window.addEventListener(
-            "pointerup",
-            finishContactDrag,
-            {
-                once: true,
-            }
-        );
-    }
-
     function handleContactDrag(
         event
     ) {
@@ -1257,42 +1168,6 @@ export default function BlockEditorTab({
                             : item
                 ),
         });
-    }
-
-    function finishContactDrag() {
-        window.removeEventListener(
-            "pointermove",
-            handleContactDrag
-        );
-
-        const drag =
-            dragRef.current;
-
-        if (!drag) {
-            return;
-        }
-
-        const contact =
-            (
-                dataRef.current
-                    .contacts ??
-                []
-            ).find(
-                (item) =>
-                    item.id ===
-                    drag.contactId
-            );
-
-        if (contact) {
-            void updateContact(
-                contact,
-                drag.positionMm,
-                drag.lengthMm
-            );
-        }
-
-        dragRef.current =
-            null;
     }
 
     function openContactDialog(
@@ -1446,36 +1321,6 @@ export default function BlockEditorTab({
                 <span className="block-editor-contact-label">
                     {contact.contactDetectorName}
                 </span>
-
-                <button
-                    type="button"
-                    className="block-editor-contact-handle start"
-                    onPointerDown={(
-                        event
-                    ) =>
-                        startContactDrag(
-                            event,
-                            contact,
-                            "start"
-                        )
-                    }
-                    title="Belegtmelder-Anfang verschieben"
-                />
-
-                <button
-                    type="button"
-                    className="block-editor-contact-handle end"
-                    onPointerDown={(
-                        event
-                    ) =>
-                        startContactDrag(
-                            event,
-                            contact,
-                            "end"
-                        )
-                    }
-                    title="Belegtmelder-Ende verschieben"
-                />
             </div>
         );
     }
@@ -1603,39 +1448,6 @@ export default function BlockEditorTab({
 
     return (
         <div className="block-editor-tab">
-            <div className="block-editor-tab-toolbar">
-                <label>
-                    Ausrichtung im Grid
-                    <select
-                        value={
-                            orientation
-                        }
-                        onChange={(event) =>
-                            void changeOrientation(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                    >
-                        <option
-                            value={
-                                BlockGridOrientation.HORIZONTAL
-                            }
-                        >
-                            Horizontal
-                        </option>
-                        <option
-                            value={
-                                BlockGridOrientation.VERTICAL
-                            }
-                        >
-                            Vertikal
-                        </option>
-                    </select>
-                </label>
-            </div>
-
             <div className="block-editor-tab-content">
                 <div className="block-editor-preview">
                     <div className="block-editor-preview-title">
@@ -1937,6 +1749,79 @@ export default function BlockEditorTab({
                                 Wähle zuerst einen roten Belegtmeldeabschnitt aus.
                                 Erst dann können Markierungen angelegt werden.
                             </div>
+                        )}
+                    </section>
+
+                    <section
+                        className={[
+                            "block-editor-section",
+                            !selectedContact ? "disabled" : "",
+                        ].join(" ")}
+                    >
+                        <h4>Belegtmelder</h4>
+
+                        {!selectedContact && (
+                            <div className="block-editor-disabled-hint">
+                                Wähle einen Belegtmelder aus.
+                            </div>
+                        )}
+
+                        {selectedContact && (
+                            <>
+                                <label>
+                                    Position
+                                    <div className="block-editor-unit-input">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max={data.lengthMm}
+                                            value={getContactPosition(
+                                                selectedContact
+                                            )}
+                                            onChange={(event) =>
+                                                void updateContact(
+                                                    selectedContact,
+                                                    event.target.value,
+                                                    getContactSectionLength(
+                                                        selectedContact
+                                                    )
+                                                )
+                                            }
+                                        />
+                                        <span>mm</span>
+                                    </div>
+                                </label>
+
+                                <label>
+                                    Länge
+                                    <div className="block-editor-unit-input">
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max={Math.max(
+                                                1,
+                                                data.lengthMm -
+                                                    getContactPosition(
+                                                        selectedContact
+                                                    )
+                                            )}
+                                            value={getContactSectionLength(
+                                                selectedContact
+                                            )}
+                                            onChange={(event) =>
+                                                void updateContact(
+                                                    selectedContact,
+                                                    getContactPosition(
+                                                        selectedContact
+                                                    ),
+                                                    event.target.value
+                                                )
+                                            }
+                                        />
+                                        <span>mm</span>
+                                    </div>
+                                </label>
+                            </>
                         )}
                     </section>
 
