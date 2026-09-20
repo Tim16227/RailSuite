@@ -149,16 +149,6 @@ export function BlockEditor({
   ] = useState(null);
 
   const [
-    blockForm,
-    setBlockForm,
-  ] = useState({
-    name: "",
-    lengthMm: "1000",
-    direction:
-      BlockDirection.BOTH,
-  });
-
-  const [
     markerForm,
     setMarkerForm,
   ] = useState({
@@ -414,7 +404,7 @@ export function BlockEditor({
     );
   }
 
-  function handlePointerUp(
+  async function handlePointerUp(
     event
   ) {
     if (
@@ -445,80 +435,49 @@ export function BlockEditor({
       return;
     }
 
-    setBlockForm({
-      name:
-        `Block ${blocks.length + 1}`,
-
-      lengthMm:
-        String(
-          Math.max(
-            1,
-            draftCells.length *
-              200
-          )
-        ),
-
-      direction:
-        BlockDirection.BOTH,
-    });
-  }
-
-  async function saveBlock() {
-    if (
-      draftCells.length === 0
-    ) {
-      return;
-    }
-
     try {
-      const created =
-        await createBlock(
-          layout.id,
-          {
-            name:
-              blockForm.name.trim() ||
-              `Block ${
-                blocks.length + 1
-              }`,
+        const created =
+            await createBlock(
+                layout.id,
+                {
+                    name:
+                        `Block ${
+                            blocks.length + 1
+                        }`,
 
-            lengthMm:
-              Number(
-                blockForm.lengthMm
-              ),
+                    lengthMm:
+                        Math.max(
+                            1,
+                            draftCells.length *
+                                200
+                        ),
 
-            direction:
-              blockForm.direction,
+                    direction:
+                        BlockDirection.BOTH,
 
-            cells:
-              draftCells,
-          }
+                    cells:
+                        draftCells,
+                }
+            );
+
+        setBlocks(
+            (current) => [
+                ...current,
+                created,
+            ]
         );
 
-      setBlocks(
-        (current) => [
-          ...current,
-          created,
-        ]
-      );
+        setSelectedBlockId(
+            created.id
+        );
 
-      setSelectedBlockId(
-        created.id
-      );
-
-      setDraftCells([]);
-      setDraftStart(null);
-
-      setBlockForm({
-        name: "",
-        lengthMm: "1000",
-        direction:
-          BlockDirection.BOTH,
-      });
+        setDraftCells([]);
+        setDraftStart(null);
     } catch (error) {
-      console.error(
-        "Block konnte nicht gespeichert werden:",
-        error
-      );
+        console.error(
+            "Block konnte nicht gespeichert werden:",
+            error
+        );
     }
   }
 
@@ -1124,564 +1083,6 @@ export function BlockEditor({
 
         {renderDraft()}
       </svg>
-
-      {interactive && (
-        <div className="block-editor-panel">
-          <div className="block-editor-panel-header">
-            <strong>
-              Blöcke
-            </strong>
-
-            <span>
-              {blocks.length}
-            </span>
-          </div>
-
-          <div className="block-list">
-            {blocks.length === 0 && (
-              <div className="block-empty">
-                Ziehe mit der Maus über
-                ein Gleis, um einen Block
-                anzulegen.
-              </div>
-            )}
-
-            {blocks.map(
-              (block) => (
-                <div
-                  key={block.id}
-                  className={
-                    selectedBlockId ===
-                    block.id
-                      ? "block-list-item active"
-                      : "block-list-item"
-                  }
-                  onClick={() =>
-                    setSelectedBlockId(
-                      block.id
-                    )
-                  }
-                >
-                  <span>
-                    {block.name}
-                  </span>
-
-                  <small>
-                    {block.lengthMm} mm
-                  </small>
-
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void removeBlock(
-                        block
-                      );
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )
-            )}
-          </div>
-
-          {draftCells.length >
-            0 && (
-            <div className="block-editor-section">
-              <h4>
-                Neuer Block
-              </h4>
-
-              <label>
-                Name
-                <input
-                  value={
-                    blockForm.name
-                  }
-                  onChange={(event) =>
-                    setBlockForm(
-                      (current) => ({
-                        ...current,
-                        name:
-                          event.target
-                            .value,
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Länge (mm)
-                <input
-                  type="number"
-                  min="1"
-                  value={
-                    blockForm.lengthMm
-                  }
-                  onChange={(event) =>
-                    setBlockForm(
-                      (current) => ({
-                        ...current,
-                        lengthMm:
-                          event.target
-                            .value,
-                      })
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Richtung
-                <select
-                  value={
-                    blockForm.direction
-                  }
-                  onChange={(event) =>
-                    setBlockForm(
-                      (current) => ({
-                        ...current,
-                        direction:
-                          event.target
-                            .value,
-                      })
-                    )
-                  }
-                >
-                  <option value="BOTH">
-                    Beide Richtungen
-                  </option>
-
-                  <option value="FORWARD">
-                    Vorwärts
-                  </option>
-
-                  <option value="REVERSE">
-                    Rückwärts
-                  </option>
-                </select>
-              </label>
-
-              <button
-                type="button"
-                className="block-primary-button"
-                onClick={() =>
-                  void saveBlock()
-                }
-              >
-                Block speichern
-              </button>
-            </div>
-          )}
-
-          {selectedBlock && (
-            <>
-              <div className="block-editor-section">
-                <h4>
-                  {selectedBlock.name}
-                </h4>
-
-                <div className="block-info">
-                  Länge:{" "}
-                  {selectedBlock.lengthMm} mm
-                  <br />
-                  Zellen:{" "}
-                  {
-                    selectedBlock.cells
-                      .length
-                  }
-                </div>
-              </div>
-
-              <div className="block-editor-section">
-                <h4>
-                  Brems-/Haltemarkierung
-                </h4>
-
-                <label>
-                  Typ
-                  <select
-                    value={
-                      markerForm.type
-                    }
-                    onChange={(event) =>
-                      setMarkerForm(
-                        (current) => ({
-                          ...current,
-                          type:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  >
-                    <option value="BRAKE">
-                      Bremsrampe
-                    </option>
-
-                    <option value="STOP">
-                      Haltemarkierung
-                    </option>
-
-                    <option value="ENTRY">
-                      Einfahrt
-                    </option>
-
-                    <option value="EXIT">
-                      Ausfahrt
-                    </option>
-                  </select>
-                </label>
-
-                <label>
-                  Position (mm)
-                  <input
-                    type="number"
-                    min="0"
-                    value={
-                      markerForm.positionMm
-                    }
-                    onChange={(event) =>
-                      setMarkerForm(
-                        (current) => ({
-                          ...current,
-                          positionMm:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </label>
-
-                <label>
-                  Länge (mm)
-                  <input
-                    type="number"
-                    min="1"
-                    value={
-                      markerForm.lengthMm
-                    }
-                    onChange={(event) =>
-                      setMarkerForm(
-                        (current) => ({
-                          ...current,
-                          lengthMm:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </label>
-
-                <label>
-                  Richtung
-                  <select
-                    value={
-                      markerForm.direction
-                    }
-                    onChange={(event) =>
-                      setMarkerForm(
-                        (current) => ({
-                          ...current,
-                          direction:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  >
-                    <option value="BOTH">
-                      Beide
-                    </option>
-
-                    <option value="FORWARD">
-                      Vorwärts
-                    </option>
-
-                    <option value="REVERSE">
-                      Rückwärts
-                    </option>
-                  </select>
-                </label>
-
-                <button
-                  type="button"
-                  className="block-secondary-button"
-                  onClick={() =>
-                    void saveMarker()
-                  }
-                >
-                  Markierung hinzufügen
-                </button>
-
-                <div className="block-items">
-                  {selectedBlock.markers.map(
-                    (marker) => (
-                      <div
-                        className="block-item"
-                        key={marker.id}
-                      >
-                        <span>
-                          {marker.type}
-                          {" · "}
-                          {
-                            marker.positionMm
-                          } mm
-                          {" · "}
-                          {
-                            marker.lengthMm
-                          } mm
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void removeMarker(
-                              marker
-                            )
-                          }
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="block-editor-section">
-                <h4>
-                  Kontaktmelder
-                </h4>
-
-                <label>
-                  Name
-                  <input
-                    value={
-                      detectorForm.name
-                    }
-                    onChange={(event) =>
-                      setDetectorForm(
-                        (current) => ({
-                          ...current,
-                          name:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                    placeholder="z. B. RMK 101"
-                  />
-                </label>
-
-                <label>
-                  Typ
-                  <select
-                    value={
-                      detectorForm.type
-                    }
-                    onChange={(event) =>
-                      setDetectorForm(
-                        (current) => ({
-                          ...current,
-                          type:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  >
-                    <option value="PHYSICAL">
-                      Physisch
-                    </option>
-
-                    <option value="VIRTUAL">
-                      Virtuell
-                    </option>
-                  </select>
-                </label>
-
-                {detectorForm.type ===
-                  ContactDetectorType.PHYSICAL && (
-                  <>
-                    <label>
-                      Digitalsystem
-                      <select
-                        value={
-                          detectorForm.digitalSystemId
-                        }
-                        onChange={(event) =>
-                          setDetectorForm(
-                            (current) => ({
-                              ...current,
-                              digitalSystemId:
-                                event.target
-                                  .value,
-                            })
-                          )
-                        }
-                      >
-                        <option value="">
-                          Bitte wählen
-                        </option>
-
-                        {digitalSystems.map(
-                          (system) => (
-                            <option
-                              key={
-                                system.id
-                              }
-                              value={
-                                system.id
-                              }
-                            >
-                              {system.name}
-                            </option>
-                          )
-                        )}
-                      </select>
-                    </label>
-
-                    <label>
-                      Adresse
-                      <input
-                        type="number"
-                        min="1"
-                        value={
-                          detectorForm.digitalAddress
-                        }
-                        onChange={(event) =>
-                          setDetectorForm(
-                            (current) => ({
-                              ...current,
-                              digitalAddress:
-                                event.target
-                                  .value,
-                            })
-                          )
-                        }
-                      />
-                    </label>
-                  </>
-                )}
-
-                <label>
-                  Rolle
-                  <select
-                    value={
-                      detectorForm.role
-                    }
-                    onChange={(event) =>
-                      setDetectorForm(
-                        (current) => ({
-                          ...current,
-                          role:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  >
-                    <option value="ENTRY">
-                      Einfahrt
-                    </option>
-
-                    <option value="OCCUPANCY">
-                      Belegung
-                    </option>
-
-                    <option value="EXIT">
-                      Ausfahrt
-                    </option>
-                  </select>
-                </label>
-
-                <label>
-                  Position (mm)
-                  <input
-                    type="number"
-                    min="0"
-                    value={
-                      detectorForm.positionMm
-                    }
-                    onChange={(event) =>
-                      setDetectorForm(
-                        (current) => ({
-                          ...current,
-                          positionMm:
-                            event.target
-                              .value,
-                        })
-                      )
-                    }
-                  />
-                </label>
-
-                <button
-                  type="button"
-                  className="block-secondary-button"
-                  onClick={() =>
-                    void createDetectorAndAssign()
-                  }
-                >
-                  Melder anlegen und zuordnen
-                </button>
-
-                <div className="block-items">
-                  {selectedBlock.contacts.map(
-                    (contact) => (
-                      <div
-                        className="block-item"
-                        key={
-                          contact.id
-                        }
-                      >
-                        <span>
-                          {
-                            contact.contactDetectorName
-                          }
-                          {" · "}
-                          {contact.role}
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void removeAssignment(
-                              contact
-                            )
-                          }
-                        >
-                          ×
-                        </button>
-                      </div>
-                    )
-                  )}
-                </div>
-
-                {detectors.length >
-                  0 && (
-                  <div className="block-detector-hint">
-                    Vorhandene Melder:{" "}
-                    {
-                      detectors.filter(
-                        (detector) =>
-                          !selectedDetectorIds.has(
-                            detector.id
-                          )
-                      ).length
-                    }
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </div>,
     portalTarget
   );
