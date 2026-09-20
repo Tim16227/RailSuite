@@ -309,16 +309,16 @@
 .block-editor-marker-row {
     position: absolute;
 
-    left: 36px;
-    right: 36px;
+    left: 70px;
+    right: 70px;
 
-    height: 58px;
+    height: 52px;
 
     z-index: 40;
 }
 
 .block-editor-marker-row.top {
-    top:122px;
+    top:115px;
 }
 
 .block-editor-marker-row.bottom {
@@ -327,11 +327,10 @@
 
 .block-editor-preview-area.vertical
     .block-editor-marker-row {
-    top: 36px;
-    bottom: 36px;
+    top: 70px;
+    bottom: 70px;
     left: 4px;
     right: auto;
-
     width: 58px;
     height: auto;
 }

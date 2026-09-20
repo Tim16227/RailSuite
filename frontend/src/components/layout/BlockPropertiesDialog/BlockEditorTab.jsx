@@ -40,7 +40,7 @@ import {
 
 import "./BlockEditorTab.css";
 
-const AXIS_LENGTH = 760;
+const AXIS_LENGTH = 610;
 const FLAG_HEIGHT = 42;
 const SIGNAL_WIDTH = 36;
 
