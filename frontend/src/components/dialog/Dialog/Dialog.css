@@ -35,6 +35,9 @@
 .modal {
     width: 500px;
 
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 40px);
+
     background: white;
 
     border-radius: 12px;
@@ -48,6 +51,16 @@
     position: relative;
 
     z-index: 1001;
+}
+
+.modal form {
+    display: flex;
+
+    flex-direction: column;
+
+    min-height: 0;
+
+    flex: 1;
 }
 
 /*
@@ -88,6 +101,10 @@
     flex-direction: column;
 
     gap: 16px;
+
+    flex: 1;
+
+    min-height: 0;
 
     overflow-y: auto;
 }

@@ -164,6 +164,41 @@ function MarkerFlag({
             contactLength
         );
 
+    const isForward =
+        marker.direction ===
+        BlockDirection.FORWARD;
+
+    const contactEnd =
+        contactStart +
+        contactLength;
+
+    const blockPosition =
+        isForward
+            ? clamp(
+                  (
+                      contactEnd -
+                      distance
+                  ) /
+                      Math.max(
+                          1,
+                          blockLength
+                      ),
+                  0,
+                  1
+              )
+            : clamp(
+                  (
+                      contactStart +
+                      distance
+                  ) /
+                      Math.max(
+                          1,
+                          blockLength
+                      ),
+                  0,
+                  1
+              );
+
     const ramp =
         marker.type ===
         BlockMarkerType.STOP
@@ -171,29 +206,17 @@ function MarkerFlag({
             : clamp(
                   Number(marker.lengthMm) || 0,
                   0,
-                  Math.max(
-                      0,
-                      blockLength -
-                          (
-                              contactStart +
-                              distance
-                          )
-                  )
+                  isForward
+                      ? contactEnd
+                      : Math.max(
+                            0,
+                            blockLength -
+                                (
+                                    contactStart +
+                                    distance
+                                )
+                        )
               );
-
-    const blockPosition =
-        clamp(
-            (
-                contactStart +
-                distance
-            ) /
-                Math.max(
-                    1,
-                    blockLength
-                ),
-            0,
-            1
-        );
 
     const rampWidth =
         clamp(
@@ -214,9 +237,13 @@ function MarkerFlag({
     const direction =
         marker.direction;
 
-    const isForward =
-        direction ===
-        BlockDirection.FORWARD;
+    const flagRampPx = Math.max(
+        8,
+        Math.round(
+            (ramp / Math.max(1, blockLength)) *
+                AXIS_LENGTH
+        )
+    );
 
     const flagStyle =
         orientation ===
@@ -224,18 +251,12 @@ function MarkerFlag({
             ? {
                   left: `${blockPosition * 100}%`,
                   "--flag-ramp":
-                      `${Math.max(
-                          8,
-                          rampWidth * 100
-                      )}%`,
+                      `${flagRampPx}px`,
               }
             : {
                   top: `${blockPosition * 100}%`,
                   "--flag-ramp":
-                      `${Math.max(
-                          8,
-                          rampWidth * 100
-                      )}%`,
+                      `${flagRampPx}px`,
               };
     return (
         <button
@@ -537,7 +558,7 @@ export default function BlockEditorTab({
                 : Math.min(
                       100,
                       Math.max(
-                          1,
+                          0,
                           contactLength
                       )
                   );
@@ -636,9 +657,9 @@ export default function BlockEditorTab({
                           patch.lengthMm ??
                               marker.lengthMm
                       ),
-                      1,
+                      0,
                       Math.max(
-                          1,
+                          0,
                           contactLength -
                               positionMm
                       )
@@ -1218,16 +1239,25 @@ export default function BlockEditorTab({
             return 0;
         }
 
-        return clamp(
-            (
-                Number(
-                    marker.positionMm
-                ) || 0
-            ) /
-                contactLength,
-            0,
-            1
-        );
+        const position =
+            clamp(
+                (
+                    Number(
+                        marker.positionMm
+                    ) || 0
+                ) /
+                    contactLength,
+                0,
+                1
+            );
+
+        const isForward =
+            marker.direction ===
+            BlockDirection.FORWARD;
+
+        return isForward
+            ? 1 - position
+            : position;
     }
 
     function renderContact(
